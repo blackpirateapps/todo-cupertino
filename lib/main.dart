@@ -42,7 +42,7 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoTabScaffold(
       tabBar: CupertinoTabBar(
-        items: [
+        items: const [
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.house_alt),
             label: 'Home',
@@ -906,7 +906,7 @@ class TaskCard extends StatelessWidget {
                         children: [
                           CupertinoButton(
                             padding: EdgeInsets.zero,
-                            minimumSize: 24,
+                            minimumSize: const Size.square(24),
                             onPressed: () => onToggleSubtask(subtask.id),
                             child: Icon(
                               subtask.isCompleted

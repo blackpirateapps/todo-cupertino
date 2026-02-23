@@ -41,7 +41,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoTabScaffold(
-      tabBar: const CupertinoTabBar(
+      tabBar: CupertinoTabBar(
         items: [
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.house_alt),
@@ -797,7 +797,7 @@ class TaskCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: separator.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: separator.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Column(
         children: [
@@ -894,7 +894,10 @@ class TaskCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Column(
                 children: [
-                  Container(height: 0.5, color: separator.withOpacity(0.4)),
+                  Container(
+                    height: 0.5,
+                    color: separator.withValues(alpha: 0.4),
+                  ),
                   const SizedBox(height: 8),
                   for (final subtask in task.subtasks)
                     Padding(
@@ -903,7 +906,7 @@ class TaskCard extends StatelessWidget {
                         children: [
                           CupertinoButton(
                             padding: EdgeInsets.zero,
-                            minSize: 24,
+                            minimumSize: 24,
                             onPressed: () => onToggleSubtask(subtask.id),
                             child: Icon(
                               subtask.isCompleted
@@ -972,7 +975,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     final resolvedColor =
         color ?? CupertinoDynamicColor.resolve(CupertinoColors.activeBlue, context);
-    final bg = resolvedColor.withOpacity(0.12);
+    final bg = resolvedColor.withValues(alpha: 0.12);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -1018,7 +1021,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: separator.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: separator.withValues(alpha: 0.3), width: 0.5),
       ),
       child: child,
     );
@@ -1377,4 +1380,3 @@ String formatDateTime(DateTime value) {
 
   return '$month $day, $year  $hour:$minute $suffix';
 }
-

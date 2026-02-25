@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:todo_cupertino/main.dart';
+import 'package:todo_cupertino/utils/app_utils.dart';
 
 void main() {
   test('formatDateTime includes month and year', () {

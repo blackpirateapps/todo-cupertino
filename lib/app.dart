@@ -38,7 +38,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoTabScaffold(
-      tabBar: const CupertinoTabBar(
+      tabBar: CupertinoTabBar(
         items: [
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.check_mark_circled_solid),
@@ -57,7 +57,7 @@ class AppShell extends StatelessWidget {
             label: 'Flagged',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.gearshape),
+            icon: Icon(CupertinoIcons.gear),
             label: 'Settings',
           ),
         ],

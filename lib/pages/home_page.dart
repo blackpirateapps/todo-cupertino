@@ -643,11 +643,10 @@ class _HomeDashboardSnapshot {
     final todayTasks = state.tasksDueToday();
     final totalForRing = todayTasks.isEmpty
         ? 6
-        : todayTasks.length.clamp(1, 99) as int;
+        : todayTasks.length.clamp(1, 99);
     final completedForRing = todayTasks.isEmpty
         ? 4
-        : todayTasks.where((t) => t.isCompleted).length.clamp(0, totalForRing)
-              as int;
+        : todayTasks.where((t) => t.isCompleted).length.clamp(0, totalForRing);
 
     final todayRows = <_TodayTaskRowData>[];
     for (final task in todayTasks.take(3)) {

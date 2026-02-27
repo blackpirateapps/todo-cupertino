@@ -41,6 +41,39 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+                SectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Pomodoro Defaults',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _DurationRow(
+                        label: 'Focus length',
+                        value: state.pomodoroMinutes,
+                        onMinus: () =>
+                            state.setPomodoroMinutes(state.pomodoroMinutes - 1),
+                        onPlus: () =>
+                            state.setPomodoroMinutes(state.pomodoroMinutes + 1),
+                      ),
+                      const SizedBox(height: 8),
+                      _DurationRow(
+                        label: 'Break length',
+                        value: state.breakMinutes,
+                        onMinus: () =>
+                            state.setBreakMinutes(state.breakMinutes - 1),
+                        onPlus: () =>
+                            state.setBreakMinutes(state.breakMinutes + 1),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 const SectionCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,6 +98,44 @@ class SettingsPage extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _DurationRow extends StatelessWidget {
+  const _DurationRow({
+    required this.label,
+    required this.value,
+    required this.onMinus,
+    required this.onPlus,
+  });
+
+  final String label;
+  final int value;
+  final VoidCallback onMinus;
+  final VoidCallback onPlus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label)),
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size.square(28),
+          onPressed: onMinus,
+          child: const Icon(CupertinoIcons.minus_circle),
+        ),
+        const SizedBox(width: 8),
+        Text('$value min', style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(width: 8),
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size.square(28),
+          onPressed: onPlus,
+          child: const Icon(CupertinoIcons.add_circled),
+        ),
+      ],
     );
   }
 }

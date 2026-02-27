@@ -1,14 +1,20 @@
 import 'package:flutter/cupertino.dart';
 
+import '../models/task.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/task_card.dart';
 import 'task_editor_page.dart';
 
 class ScheduledPage extends StatelessWidget {
-  const ScheduledPage({super.key, required this.state});
+  const ScheduledPage({
+    super.key,
+    required this.state,
+    required this.onStartFocus,
+  });
 
   final AppState state;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +49,7 @@ class ScheduledPage extends StatelessWidget {
                   onToggleComplete: () => state.toggleTaskCompleted(task.id),
                   onToggleSubtask: (subtaskId) =>
                       state.toggleSubtaskCompleted(task.id, subtaskId),
+                  onStartFocus: () => onStartFocus(task),
                 );
               },
             );

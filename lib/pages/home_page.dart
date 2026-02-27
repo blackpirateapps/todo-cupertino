@@ -10,9 +10,10 @@ import 'list_editor_page.dart';
 import 'task_editor_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.state});
+  const HomePage({super.key, required this.state, required this.onStartFocus});
 
   final AppState state;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +47,7 @@ class HomePage extends StatelessWidget {
                   tasks: displayToday,
                   state: state,
                   onTaskTap: (task) => _openTaskEditor(context, task: task),
+                  onStartFocus: onStartFocus,
                 ),
                 const SizedBox(height: 18),
                 const _SectionTitle('My Lists'),
@@ -55,8 +57,11 @@ class HomePage extends StatelessWidget {
                   onListTap: (list) {
                     Navigator.of(context).push(
                       CupertinoPageRoute<void>(
-                        builder: (_) =>
-                            ListDetailPage(state: state, list: list),
+                        builder: (_) => ListDetailPage(
+                          state: state,
+                          list: list,
+                          onStartFocus: onStartFocus,
+                        ),
                       ),
                     );
                   },
@@ -71,7 +76,7 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 18),
                 const _SectionTitle('Upcoming'),
                 const SizedBox(height: 8),
-                _UpcomingSection(state: state),
+                _UpcomingSection(state: state, onStartFocus: onStartFocus),
               ],
             );
           },
@@ -242,6 +247,7 @@ class _TodayCard extends StatelessWidget {
     required this.tasks,
     required this.state,
     required this.onTaskTap,
+    required this.onStartFocus,
   });
 
   final int todayAllCount;
@@ -249,6 +255,7 @@ class _TodayCard extends StatelessWidget {
   final List<Task> tasks;
   final AppState state;
   final void Function(Task task) onTaskTap;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +316,7 @@ class _TodayCard extends StatelessWidget {
                           onTap: () => onTaskTap(tasks[i]),
                           onToggle: () =>
                               state.toggleTaskCompleted(tasks[i].id),
+                          onStartFocus: () => onStartFocus(tasks[i]),
                         ),
                         if (i != tasks.length - 1)
                           Container(
@@ -334,12 +342,14 @@ class _TodayTaskRow extends StatelessWidget {
     required this.listName,
     required this.onTap,
     required this.onToggle,
+    required this.onStartFocus,
   });
 
   final Task task;
   final String listName;
   final VoidCallback onTap;
   final VoidCallback onToggle;
+  final VoidCallback onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -389,6 +399,16 @@ class _TodayTaskRow extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size.square(24),
+              onPressed: onStartFocus,
+              child: const Icon(
+                CupertinoIcons.play_circle_fill,
+                color: CupertinoColors.activeBlue,
+                size: 20,
               ),
             ),
           ],
@@ -511,9 +531,10 @@ class _ListTileCard extends StatelessWidget {
 }
 
 class _UpcomingSection extends StatelessWidget {
-  const _UpcomingSection({required this.state});
+  const _UpcomingSection({required this.state, required this.onStartFocus});
 
   final AppState state;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -564,6 +585,16 @@ class _UpcomingSection extends StatelessWidget {
                     style: const TextStyle(
                       color: CupertinoColors.systemGrey,
                       fontSize: 13,
+                    ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(24),
+                    onPressed: () => onStartFocus(upcoming[i]),
+                    child: const Icon(
+                      CupertinoIcons.play_circle_fill,
+                      color: CupertinoColors.activeBlue,
+                      size: 20,
                     ),
                   ),
                 ],

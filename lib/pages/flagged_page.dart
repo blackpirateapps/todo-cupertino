@@ -7,9 +7,14 @@ import '../widgets/task_card.dart';
 import 'task_editor_page.dart';
 
 class FlaggedPage extends StatelessWidget {
-  const FlaggedPage({super.key, required this.state});
+  const FlaggedPage({
+    super.key,
+    required this.state,
+    required this.onStartFocus,
+  });
 
   final AppState state;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,7 @@ class FlaggedPage extends StatelessWidget {
                   onToggleComplete: () => state.toggleTaskCompleted(task.id),
                   onToggleSubtask: (subtaskId) =>
                       state.toggleSubtaskCompleted(task.id, subtaskId),
+                  onStartFocus: () => onStartFocus(task),
                 );
               },
             );

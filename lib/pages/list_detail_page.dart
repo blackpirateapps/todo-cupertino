@@ -8,10 +8,16 @@ import '../widgets/task_card.dart';
 import 'task_editor_page.dart';
 
 class ListDetailPage extends StatelessWidget {
-  const ListDetailPage({super.key, required this.state, required this.list});
+  const ListDetailPage({
+    super.key,
+    required this.state,
+    required this.list,
+    required this.onStartFocus,
+  });
 
   final AppState state;
   final TodoList list;
+  final void Function(Task task) onStartFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +53,7 @@ class ListDetailPage extends StatelessWidget {
                   onToggleComplete: () => state.toggleTaskCompleted(task.id),
                   onToggleSubtask: (subtaskId) =>
                       state.toggleSubtaskCompleted(task.id, subtaskId),
+                  onStartFocus: () => onStartFocus(task),
                 );
               },
             );

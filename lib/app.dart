@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 
+import 'models/task.dart';
 import 'pages/all_tasks_page.dart';
 import 'pages/flagged_page.dart';
+import 'pages/focus_page.dart';
 import 'pages/home_page.dart';
 import 'pages/scheduled_page.dart';
 import 'pages/settings_page.dart';
@@ -31,14 +33,41 @@ class TodoCupertinoApp extends StatelessWidget {
   }
 }
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.state});
 
   final AppState state;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  late final CupertinoTabController _tabController;
+  static const _focusTabIndex = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = CupertinoTabController(initialIndex: 0);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _startFocusForTask(Task task) {
+    widget.state.setFocusTask(task.id, requestStart: true);
+    _tabController.index = _focusTabIndex;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     return CupertinoTabScaffold(
+      controller: _tabController,
       tabBar: CupertinoTabBar(
         items: const [
           BottomNavigationBarItem(
@@ -58,6 +87,10 @@ class AppShell extends StatelessWidget {
             label: 'Flagged',
           ),
           BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.timer),
+            label: 'Focus',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.gear),
             label: 'Settings',
           ),
@@ -69,31 +102,47 @@ class AppShell extends StatelessWidget {
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: HomePage(state: state),
+                child: HomePage(state: state, onStartFocus: _startFocusForTask),
               ),
             );
           case 1:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: ScheduledPage(state: state),
+                child: ScheduledPage(
+                  state: state,
+                  onStartFocus: _startFocusForTask,
+                ),
               ),
             );
           case 2:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: AllTasksPage(state: state),
+                child: AllTasksPage(
+                  state: state,
+                  onStartFocus: _startFocusForTask,
+                ),
               ),
             );
           case 3:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: FlaggedPage(state: state),
+                child: FlaggedPage(
+                  state: state,
+                  onStartFocus: _startFocusForTask,
+                ),
               ),
             );
           case 4:
+            return CupertinoTabView(
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: FocusPage(state: state),
+              ),
+            );
+          case 5:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
@@ -104,7 +153,7 @@ class AppShell extends StatelessWidget {
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: HomePage(state: state),
+                child: HomePage(state: state, onStartFocus: _startFocusForTask),
               ),
             );
         }

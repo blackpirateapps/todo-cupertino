@@ -13,20 +13,31 @@ class AppState extends ChangeNotifier {
     required List<Task> tasks,
     required List<TodoList> lists,
     required bool isDarkMode,
+    required int pomodoroMinutes,
+    required int breakMinutes,
   }) : _preferences = preferences,
        _tasks = tasks,
        _lists = lists,
-       _isDarkMode = isDarkMode;
+       _isDarkMode = isDarkMode,
+       _pomodoroMinutes = pomodoroMinutes,
+       _breakMinutes = breakMinutes;
 
   static const _tasksKey = 'tasks_v2';
   static const _legacyTasksKey = 'tasks_v1';
   static const _listsKey = 'lists_v1';
   static const _darkModeKey = 'dark_mode_v1';
+  static const _pomodoroMinutesKey = 'pomodoro_minutes_v1';
+  static const _breakMinutesKey = 'pomodoro_break_minutes_v1';
 
   final SharedPreferences _preferences;
   List<Task> _tasks;
   List<TodoList> _lists;
   bool _isDarkMode;
+  int _pomodoroMinutes;
+  int _breakMinutes;
+
+  String? _focusTaskId;
+  int _focusStartNonce = 0;
 
   static Future<AppState> load() async {
     final preferences = await SharedPreferences.getInstance();
@@ -83,6 +94,8 @@ class AppState extends ChangeNotifier {
       tasks: migratedTasks,
       lists: mutableLists,
       isDarkMode: preferences.getBool(_darkModeKey) ?? false,
+      pomodoroMinutes: preferences.getInt(_pomodoroMinutesKey) ?? 25,
+      breakMinutes: preferences.getInt(_breakMinutesKey) ?? 5,
     );
 
     if (didMigrate) {
@@ -95,9 +108,29 @@ class AppState extends ChangeNotifier {
   }
 
   bool get isDarkMode => _isDarkMode;
+  int get pomodoroMinutes => _pomodoroMinutes;
+  int get breakMinutes => _breakMinutes;
 
   List<Task> get tasks => List.unmodifiable(_tasks);
   List<TodoList> get lists => List.unmodifiable(_lists);
+
+  int get focusStartNonce => _focusStartNonce;
+  String? get focusTaskId => _focusTaskId;
+  Task? get focusTask {
+    if (_focusTaskId == null) return null;
+    for (final task in _tasks) {
+      if (task.id == _focusTaskId) return task;
+    }
+    return null;
+  }
+
+  void setFocusTask(String taskId, {bool requestStart = false}) {
+    _focusTaskId = taskId;
+    if (requestStart) {
+      _focusStartNonce += 1;
+    }
+    notifyListeners();
+  }
 
   TodoList? listById(String id) {
     for (final list in _lists) {
@@ -167,6 +200,22 @@ class AppState extends ChangeNotifier {
     _isDarkMode = enabled;
     notifyListeners();
     await _preferences.setBool(_darkModeKey, enabled);
+  }
+
+  Future<void> setPomodoroMinutes(int minutes) async {
+    final normalized = minutes.clamp(5, 120) as int;
+    if (_pomodoroMinutes == normalized) return;
+    _pomodoroMinutes = normalized;
+    notifyListeners();
+    await _preferences.setInt(_pomodoroMinutesKey, normalized);
+  }
+
+  Future<void> setBreakMinutes(int minutes) async {
+    final normalized = minutes.clamp(1, 60) as int;
+    if (_breakMinutes == normalized) return;
+    _breakMinutes = normalized;
+    notifyListeners();
+    await _preferences.setInt(_breakMinutesKey, normalized);
   }
 
   Future<void> addList(TodoList list) async {

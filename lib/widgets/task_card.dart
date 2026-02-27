@@ -11,6 +11,7 @@ class TaskCard extends StatelessWidget {
     required this.onTap,
     required this.onToggleComplete,
     required this.onToggleSubtask,
+    required this.onStartFocus,
     this.listName,
   });
 
@@ -18,6 +19,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onToggleComplete;
   final void Function(String subtaskId) onToggleSubtask;
+  final VoidCallback onStartFocus;
   final String? listName;
 
   @override
@@ -133,10 +135,25 @@ class TaskCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
-                    CupertinoIcons.chevron_forward,
-                    size: 16,
-                    color: CupertinoColors.tertiaryLabel,
+                  Column(
+                    children: [
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size.square(24),
+                        onPressed: onStartFocus,
+                        child: const Icon(
+                          CupertinoIcons.play_circle_fill,
+                          size: 22,
+                          color: CupertinoColors.activeBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Icon(
+                        CupertinoIcons.chevron_forward,
+                        size: 16,
+                        color: CupertinoColors.tertiaryLabel,
+                      ),
+                    ],
                   ),
                 ],
               ),

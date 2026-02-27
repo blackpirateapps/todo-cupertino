@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
 import '../models/task.dart';
-import '../models/todo_list.dart';
 import '../state/app_state.dart';
 import '../utils/app_utils.dart';
 

@@ -61,7 +61,7 @@ const Map<String, IconData> kListIconMap = {
   'airplane': CupertinoIcons.airplane,
   'folder_fill': CupertinoIcons.folder_fill,
   'star_fill': CupertinoIcons.star_fill,
-  'game_controller_fill': CupertinoIcons.game_controller_fill,
+  'game_controller_fill': CupertinoIcons.circle_fill,
 };
 
 IconData iconForKey(String key) {

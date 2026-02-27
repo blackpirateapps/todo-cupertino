@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 
-import '../models/task.dart';
 import '../state/app_state.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/task_card.dart';

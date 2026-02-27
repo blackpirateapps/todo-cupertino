@@ -203,7 +203,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setPomodoroMinutes(int minutes) async {
-    final normalized = minutes.clamp(5, 120) as int;
+    final normalized = minutes.clamp(5, 120);
     if (_pomodoroMinutes == normalized) return;
     _pomodoroMinutes = normalized;
     notifyListeners();
@@ -211,7 +211,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setBreakMinutes(int minutes) async {
-    final normalized = minutes.clamp(1, 60) as int;
+    final normalized = minutes.clamp(1, 60);
     if (_breakMinutes == normalized) return;
     _breakMinutes = normalized;
     notifyListeners();

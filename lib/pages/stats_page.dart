@@ -36,7 +36,7 @@ class StatsPage extends StatelessWidget {
                         gridData: const FlGridData(show: true),
                         borderData: FlBorderData(show: false),
                         minY: 0,
-                        lineTouchData: LineTouchData(enabled: true),
+                        lineTouchData: const LineTouchData(enabled: true),
                         titlesData: FlTitlesData(
                           topTitles: const AxisTitles(
                             sideTitles: SideTitles(showTitles: false),

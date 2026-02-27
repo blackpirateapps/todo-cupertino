@@ -5,6 +5,7 @@ import 'pages/all_tasks_page.dart';
 import 'pages/focus_page.dart';
 import 'pages/home_page.dart';
 import 'pages/lists_page.dart';
+import 'pages/stats_page.dart';
 import 'pages/settings_page.dart';
 import 'state/app_state.dart';
 import 'widgets/quick_add_overlay.dart';
@@ -86,6 +87,10 @@ class _AppShellState extends State<AppShell> {
             label: 'Focus',
           ),
           BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.chart_bar_alt_fill),
+            label: 'Stats',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.gear),
             label: 'Settings',
           ),
@@ -128,6 +133,13 @@ class _AppShellState extends State<AppShell> {
               ),
             );
           case 4:
+            return CupertinoTabView(
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: StatsPage(state: state),
+              ),
+            );
+          case 5:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,

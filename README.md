@@ -5,9 +5,10 @@ Cupertino-themed todo list app for Android (Flutter UI using only Cupertino widg
 ## Features
 
 - Today dashboard (search, upcoming, and home list strip)
-- All tasks page
+- All tasks page (expandable rows with subtasks/details)
 - Lists page (create/edit/delete lists, open list detail)
 - Focus page (choose task, per-task focus duration, timer)
+- Stats page (interactive charts)
 - Settings page (dark mode + pomodoro defaults)
 - Task fields: title, due date, description, subtasks, tags, list, priority
 - Local-only persistence via `shared_preferences` (JSON)

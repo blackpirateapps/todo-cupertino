@@ -130,64 +130,80 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   @override
   Widget build(BuildContext context) {
     final list = widget.state.listById(_listId);
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Container(
-      height: 320,
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Quick Add Task',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 10),
-              CupertinoTextField(
-                controller: _titleController,
-                placeholder: 'Task title',
-                padding: const EdgeInsets.all(12),
-              ),
-              const SizedBox(height: 8),
-              _row(
-                context,
-                label: 'Due date',
-                value: _dueDate == null ? 'None' : formatDateTime(_dueDate!),
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 6),
-              _row(
-                context,
-                label: 'List',
-                value: list?.name ?? 'Unknown',
-                onTap: _pickList,
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: CupertinoButton(
-                      color: CupertinoColors.systemGrey5,
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground.resolveFrom(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 280),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Quick Add Task',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: CupertinoButton.filled(
-                      onPressed: _save,
-                      child: const Text('Add'),
+                    const SizedBox(height: 10),
+                    CupertinoTextField(
+                      controller: _titleController,
+                      placeholder: 'Task title',
+                      padding: const EdgeInsets.all(12),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    _row(
+                      context,
+                      label: 'Due date',
+                      value: _dueDate == null
+                          ? 'None'
+                          : formatDateTime(_dueDate!),
+                      onTap: _pickDate,
+                    ),
+                    const SizedBox(height: 6),
+                    _row(
+                      context,
+                      label: 'List',
+                      value: list?.name ?? 'Unknown',
+                      onTap: _pickList,
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CupertinoButton(
+                            color: CupertinoColors.systemGrey5,
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CupertinoButton.filled(
+                            onPressed: _save,
+                            child: const Text('Add'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),

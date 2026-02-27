@@ -23,6 +23,7 @@ class AllTasksPage extends StatefulWidget {
 class _AllTasksPageState extends State<AllTasksPage> {
   String _searchText = '';
   _TasksFilter _filter = _TasksFilter.all;
+  final Set<String> _expandedTaskIds = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -104,8 +105,12 @@ class _AllTasksPageState extends State<AllTasksPage> {
                             listName: widget.state.listNameForTask(tasks[i]),
                             onToggle: () =>
                                 widget.state.toggleTaskCompleted(tasks[i].id),
-                            onTap: () =>
+                            onTap: () => _toggleExpanded(tasks[i].id),
+                            isExpanded: _expandedTaskIds.contains(tasks[i].id),
+                            onEdit: () =>
                                 _openTaskEditor(context, task: tasks[i]),
+                            onToggleSubtask: (subtaskId) => widget.state
+                                .toggleSubtaskCompleted(tasks[i].id, subtaskId),
                             onStartFocus: () => widget.onStartFocus(tasks[i]),
                           ),
                           if (i != tasks.length - 1)
@@ -163,6 +168,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
       ),
     );
   }
+
+  void _toggleExpanded(String taskId) {
+    setState(() {
+      if (_expandedTaskIds.contains(taskId)) {
+        _expandedTaskIds.remove(taskId);
+      } else {
+        _expandedTaskIds.add(taskId);
+      }
+    });
+  }
 }
 
 class _TaskRow extends StatelessWidget {
@@ -171,6 +186,9 @@ class _TaskRow extends StatelessWidget {
     required this.listName,
     required this.onToggle,
     required this.onTap,
+    required this.onEdit,
+    required this.onToggleSubtask,
+    required this.isExpanded,
     required this.onStartFocus,
   });
 
@@ -178,106 +196,127 @@ class _TaskRow extends StatelessWidget {
   final String listName;
   final VoidCallback onToggle;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final void Function(String subtaskId) onToggleSubtask;
+  final bool isExpanded;
   final VoidCallback onStartFocus;
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoButton(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      onPressed: onTap,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size.square(26),
-            onPressed: onToggle,
-            child: Icon(
-              task.isCompleted
-                  ? CupertinoIcons.check_mark_circled_solid
-                  : CupertinoIcons.circle,
-              color: task.isCompleted
-                  ? CupertinoColors.activeBlue
-                  : CupertinoColors.inactiveGray,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: TextStyle(
-                    color: task.isCompleted
-                        ? CupertinoColors.secondaryLabel
-                        : CupertinoColors.label,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    decoration: task.isCompleted
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+    return Column(
+      children: [
+        CupertinoButton(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+          onPressed: onTap,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size.square(26),
+                onPressed: onToggle,
+                child: Icon(
+                  task.isCompleted
+                      ? CupertinoIcons.check_mark_circled_solid
+                      : CupertinoIcons.circle,
+                  color: task.isCompleted
+                      ? CupertinoColors.activeBlue
+                      : CupertinoColors.inactiveGray,
+                  size: 26,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _subtitle(task, listName),
-                  style: const TextStyle(
-                    color: CupertinoColors.secondaryLabel,
-                    fontSize: 14,
-                  ),
-                ),
-                if (task.focusAccumulatedMinutes > 0) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemPurple.withValues(
-                        alpha: 0.14,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: TextStyle(
+                        color: task.isCompleted
+                            ? CupertinoColors.secondaryLabel
+                            : CupertinoColors.label,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
-                      borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Text(
-                      '${task.focusAccumulatedMinutes}m focus',
+                    const SizedBox(height: 2),
+                    Text(
+                      _subtitle(task, listName),
                       style: const TextStyle(
-                        color: CupertinoColors.systemPurple,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.secondaryLabel,
+                        fontSize: 14,
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    if (task.focusAccumulatedMinutes > 0) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemPurple.withValues(
+                            alpha: 0.14,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${task.focusAccumulatedMinutes}m focus',
+                          style: const TextStyle(
+                            color: CupertinoColors.systemPurple,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (!task.isCompleted)
+                Icon(
+                  CupertinoIcons.flag_fill,
+                  color: task.priority == TaskPriority.high
+                      ? CupertinoColors.systemRed
+                      : task.priority == TaskPriority.medium
+                      ? CupertinoColors.systemYellow
+                      : CupertinoColors.systemGrey,
+                  size: 20,
+                ),
+              const SizedBox(width: 4),
+              Icon(
+                isExpanded
+                    ? CupertinoIcons.chevron_up
+                    : CupertinoIcons.chevron_down,
+                size: 16,
+                color: CupertinoColors.tertiaryLabel,
+              ),
+              const SizedBox(width: 4),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size.square(24),
+                onPressed: onStartFocus,
+                child: const Icon(
+                  CupertinoIcons.play_circle_fill,
+                  color: CupertinoColors.activeBlue,
+                  size: 26,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 6),
-          if (!task.isCompleted)
-            Icon(
-              CupertinoIcons.flag_fill,
-              color: task.priority == TaskPriority.high
-                  ? CupertinoColors.systemRed
-                  : task.priority == TaskPriority.medium
-                  ? CupertinoColors.systemYellow
-                  : CupertinoColors.systemGrey,
-              size: 20,
-            ),
-          const SizedBox(width: 6),
-          CupertinoButton(
-            padding: EdgeInsets.zero,
-            minimumSize: const Size.square(24),
-            onPressed: onStartFocus,
-            child: const Icon(
-              CupertinoIcons.play_circle_fill,
-              color: CupertinoColors.activeBlue,
-              size: 26,
-            ),
+        ),
+        if (isExpanded)
+          _ExpandedTaskDetails(
+            task: task,
+            onEdit: onEdit,
+            onToggleSubtask: onToggleSubtask,
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -302,6 +341,98 @@ class _TaskRow extends StatelessWidget {
     }
     final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${weekdays[value.weekday - 1]}, ${formatTimeOnly(value)}';
+  }
+}
+
+class _ExpandedTaskDetails extends StatelessWidget {
+  const _ExpandedTaskDetails({
+    required this.task,
+    required this.onEdit,
+    required this.onToggleSubtask,
+  });
+
+  final Task task;
+  final VoidCallback onEdit;
+  final void Function(String subtaskId) onToggleSubtask;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(42, 0, 10, 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemFill.resolveFrom(context),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (task.description.trim().isNotEmpty)
+            Text(
+              task.description.trim(),
+              style: const TextStyle(
+                color: CupertinoColors.secondaryLabel,
+                fontSize: 13,
+              ),
+            ),
+          if (task.description.trim().isNotEmpty) const SizedBox(height: 6),
+          Text(
+            'Priority: ${task.priority.label} • Repeat: ${task.repeat.label}',
+            style: const TextStyle(
+              color: CupertinoColors.secondaryLabel,
+              fontSize: 12,
+            ),
+          ),
+          if (task.subtasks.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Subtasks',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            for (final subtask in task.subtasks)
+              Row(
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(22),
+                    onPressed: () => onToggleSubtask(subtask.id),
+                    child: Icon(
+                      subtask.isCompleted
+                          ? CupertinoIcons.check_mark_circled_solid
+                          : CupertinoIcons.circle,
+                      size: 17,
+                      color: subtask.isCompleted
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.inactiveGray,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      subtask.title,
+                      style: TextStyle(
+                        color: CupertinoColors.secondaryLabel,
+                        fontSize: 12,
+                        decoration: subtask.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+          const SizedBox(height: 8),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: onEdit,
+            child: const Text('Edit Task'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

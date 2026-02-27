@@ -22,7 +22,7 @@
 - Home behavior
   - Today card aggregates tasks due today across all lists.
   - If due-today count > 3, home prioritizes high-priority tasks for display.
-  - Home search is functional (filters Today and Upcoming sections).
+  - Home search opens a dedicated Today-search page with real task results.
   - Upcoming tasks can be marked completed directly from Home.
 - Focus/Pomodoro
   - Dedicated `Focus` tab with timer UI.
@@ -33,6 +33,13 @@
   - Running focus minutes are accumulated into the focused task.
   - Live ongoing Android notification is posted while timer is running (via `flutter_local_notifications`).
   - App-wide floating quick-add button shows a running indicator while focus timer is active.
+- All Tasks behavior
+  - Tapping a task row expands/collapses inline details (description, subtasks, metadata).
+  - Expanded subtasks can be toggled directly.
+- Analytics
+  - Dedicated `Stats` tab with interactive charts for:
+    - tasks completed per day
+    - list-wise focus-minute totals
 - Quick add
   - Floating plus button across tabs opens quick-add popup.
   - Quick add supports title + due date + list.
@@ -43,6 +50,7 @@
   - All
   - Lists
   - Focus
+  - Stats
   - Settings
 
 ## Key Files
@@ -56,11 +64,15 @@
 - `lib/pages/focus_task_picker_page.dart`
   - Searchable full-page focus task chooser.
 - `lib/pages/all_tasks_page.dart`
-  - Redesigned tasks screen with segmented filters + search + play icon.
+  - Redesigned tasks screen with segmented filters + search + expandable task rows + play icon.
 - `lib/pages/home_page.dart`
-  - Dashboard with functional Today/My Lists/Upcoming + search + play icons.
+  - Dashboard with functional Today/My Lists/Upcoming + launch-to-search + play icons.
+- `lib/pages/today_search_page.dart`
+  - Dedicated search UI for tasks due today.
 - `lib/pages/lists_page.dart`
   - Full list manager tab with open/edit/delete flows.
+- `lib/pages/stats_page.dart`
+  - Interactive charts for daily completed tasks and focus minutes by list.
 - `lib/pages/list_detail_page.dart`
   - Per-list task list with create/edit and play icon.
 - `lib/pages/list_editor_page.dart`

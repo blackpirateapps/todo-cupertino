@@ -8,6 +8,7 @@ import '../widgets/common_widgets.dart';
 import 'list_detail_page.dart';
 import 'list_editor_page.dart';
 import 'task_editor_page.dart';
+import 'today_search_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.state, required this.onStartFocus});
@@ -20,19 +21,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _searchText = '';
-
   @override
   Widget build(BuildContext context) {
-    bool matchesTask(Task task) {
-      if (_searchText.trim().isEmpty) return true;
-      final query = _searchText.trim().toLowerCase();
-      final listName = widget.state.listNameForTask(task).toLowerCase();
-      return task.title.toLowerCase().contains(query) ||
-          task.description.toLowerCase().contains(query) ||
-          listName.contains(query);
-    }
-
     return CupertinoPageScaffold(
       backgroundColor: CupertinoDynamicColor.resolve(
         CupertinoColors.systemGroupedBackground,
@@ -44,28 +34,23 @@ class _HomePageState extends State<HomePage> {
           animation: widget.state,
           builder: (context, _) {
             final allTodayTasks = widget.state.tasksDueToday();
-            final visibleTodayTasks = allTodayTasks.where(matchesTask).toList();
-            final displayToday =
-                (_searchText.trim().isEmpty
-                        ? widget.state.homeTodayTasks()
-                        : widget.state.sortedTasks(visibleTodayTasks))
-                    .take(3)
-                    .toList();
+            final displayToday = widget.state.homeTodayTasks().take(3).toList();
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
               children: [
-                _HomeHeader(onAvatarTap: () => _openTaskEditor(context)),
-                const SizedBox(height: 10),
-                _SearchShell(
-                  onChanged: (value) => setState(() => _searchText = value),
+                _HomeHeader(
+                  onAvatarTap: () => _openTaskEditor(context),
+                  onSearchTap: () => _openTodaySearch(context),
                 ),
+                const SizedBox(height: 10),
+                _SearchShell(onTap: () => _openTodaySearch(context)),
                 const SizedBox(height: 16),
                 const _SectionTitle('Today'),
                 const SizedBox(height: 8),
                 _TodayCard(
-                  todayAllCount: visibleTodayTasks.length,
-                  todayCompleted: visibleTodayTasks
+                  todayAllCount: allTodayTasks.length,
+                  todayCompleted: allTodayTasks
                       .where((t) => t.isCompleted)
                       .length,
                   tasks: displayToday,
@@ -103,7 +88,6 @@ class _HomePageState extends State<HomePage> {
                 _UpcomingSection(
                   state: widget.state,
                   onStartFocus: widget.onStartFocus,
-                  searchText: _searchText,
                 ),
               ],
             );
@@ -121,12 +105,24 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Future<void> _openTodaySearch(BuildContext context) async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        builder: (context) => TodaySearchPage(
+          state: widget.state,
+          onStartFocus: widget.onStartFocus,
+        ),
+      ),
+    );
+  }
 }
 
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader({required this.onAvatarTap});
+  const _HomeHeader({required this.onAvatarTap, required this.onSearchTap});
 
   final VoidCallback onAvatarTap;
+  final VoidCallback onSearchTap;
 
   @override
   Widget build(BuildContext context) {
@@ -160,11 +156,15 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            const Icon(
-              CupertinoIcons.search,
-              color: CupertinoColors.secondaryLabel,
-              size: 22,
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(28, 28),
+              onPressed: onSearchTap,
+              child: const Icon(
+                CupertinoIcons.search,
+                color: CupertinoColors.secondaryLabel,
+                size: 22,
+              ),
             ),
           ],
         ),
@@ -215,9 +215,9 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _SearchShell extends StatelessWidget {
-  const _SearchShell({required this.onChanged});
+  const _SearchShell({required this.onTap});
 
-  final ValueChanged<String> onChanged;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -226,9 +226,26 @@ class _SearchShell extends StatelessWidget {
         color: CupertinoColors.secondarySystemFill.resolveFrom(context),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: CupertinoSearchTextField(
-        onChanged: onChanged,
-        backgroundColor: CupertinoColors.transparent,
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        onPressed: onTap,
+        child: const Row(
+          children: [
+            Icon(
+              CupertinoIcons.search,
+              size: 18,
+              color: CupertinoColors.secondaryLabel,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'Search today tasks',
+              style: TextStyle(
+                color: CupertinoColors.secondaryLabel,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -273,6 +290,7 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final total = todayAllCount == 0 ? 1 : todayAllCount;
     final progress = todayCompleted / total;
+    final isDark = CupertinoTheme.of(context).brightness == Brightness.dark;
 
     return SectionCard(
       padding: const EdgeInsets.all(10),
@@ -286,7 +304,7 @@ class _TodayCard extends StatelessWidget {
               children: [
                 CustomPaint(
                   size: const Size.square(112),
-                  painter: _RingPainter(progress: progress),
+                  painter: _RingPainter(progress: progress, isDark: isDark),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
@@ -569,32 +587,19 @@ class _ListTileCard extends StatelessWidget {
 }
 
 class _UpcomingSection extends StatelessWidget {
-  const _UpcomingSection({
-    required this.state,
-    required this.onStartFocus,
-    required this.searchText,
-  });
+  const _UpcomingSection({required this.state, required this.onStartFocus});
 
   final AppState state;
   final void Function(Task task) onStartFocus;
-  final String searchText;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final query = searchText.trim().toLowerCase();
     final upcoming = state
         .tasksWithDueDate()
-        .where((task) {
-          final isUpcoming =
-              task.dueDate != null && !isSameDate(task.dueDate!, now);
-          if (!isUpcoming) return false;
-          if (query.isEmpty) return true;
-          final listName = state.listNameForTask(task).toLowerCase();
-          return task.title.toLowerCase().contains(query) ||
-              task.description.toLowerCase().contains(query) ||
-              listName.contains(query);
-        })
+        .where(
+          (task) => task.dueDate != null && !isSameDate(task.dueDate!, now),
+        )
         .take(5)
         .toList();
 
@@ -675,9 +680,10 @@ class _UpcomingSection extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter({required this.progress});
+  _RingPainter({required this.progress, required this.isDark});
 
   final double progress;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -690,7 +696,7 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFE4E7EE);
+      ..color = isDark ? const Color(0xFF3E4350) : const Color(0xFFE4E7EE);
 
     final blue = Paint()
       ..style = PaintingStyle.stroke
@@ -720,6 +726,6 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.isDark != isDark;
   }
 }

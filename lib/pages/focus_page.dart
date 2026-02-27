@@ -80,6 +80,8 @@ class _FocusPageState extends State<FocusPage> {
           builder: (context, _) {
             final progress =
                 (_totalSeconds - _remainingSeconds) / _totalSeconds;
+            final isDark =
+                CupertinoTheme.of(context).brightness == Brightness.dark;
             return ListView(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
               children: [
@@ -126,7 +128,10 @@ class _FocusPageState extends State<FocusPage> {
                           children: [
                             CustomPaint(
                               size: const Size.square(270),
-                              painter: _TimerRingPainter(progress: progress),
+                              painter: _TimerRingPainter(
+                                progress: progress,
+                                isDark: isDark,
+                              ),
                             ),
                             Column(
                               mainAxisSize: MainAxisSize.min,
@@ -469,9 +474,10 @@ class _FocusPageState extends State<FocusPage> {
 }
 
 class _TimerRingPainter extends CustomPainter {
-  _TimerRingPainter({required this.progress});
+  _TimerRingPainter({required this.progress, required this.isDark});
 
   final double progress;
+  final bool isDark;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -479,13 +485,13 @@ class _TimerRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFD9D9DF);
+      ..color = isDark ? const Color(0xFF404552) : const Color(0xFFD9D9DF);
 
     final active = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFF8B93A3);
+      ..color = isDark ? const Color(0xFF9CA7C4) : const Color(0xFF8B93A3);
 
     final rect = Rect.fromLTWH(5, 5, size.width - 10, size.height - 10);
     canvas.drawArc(rect, 0, 6.283, false, track);
@@ -494,6 +500,6 @@ class _TimerRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TimerRingPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.isDark != isDark;
   }
 }

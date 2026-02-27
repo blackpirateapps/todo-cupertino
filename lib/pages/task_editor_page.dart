@@ -235,14 +235,29 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
                   padding: EdgeInsets.zero,
                   minimumSize: const Size.square(28),
                   onPressed: () => setState(() => _isCompleted = !_isCompleted),
-                  child: Icon(
-                    _isCompleted
-                        ? CupertinoIcons.check_mark_square_fill
-                        : CupertinoIcons.square,
-                    size: 26,
-                    color: _isCompleted
-                        ? CupertinoColors.activeBlue
-                        : CupertinoColors.inactiveGray,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: _isCompleted
+                          ? CupertinoColors.activeBlue
+                          : const Color(0x00000000),
+                      borderRadius: BorderRadius.circular(5),
+                      border: Border.all(
+                        color: _isCompleted
+                            ? CupertinoColors.activeBlue
+                            : CupertinoColors.inactiveGray,
+                        width: 1.5,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: _isCompleted
+                        ? const Icon(
+                            CupertinoIcons.check_mark,
+                            size: 14,
+                            color: CupertinoColors.white,
+                          )
+                        : null,
                   ),
                 ),
               ],

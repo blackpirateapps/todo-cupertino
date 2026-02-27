@@ -108,7 +108,7 @@ class _ListEditorPageState extends State<ListEditorPage> {
                         border: Border.all(
                           color: _colorKey == entry.key
                               ? CupertinoColors.label.resolveFrom(context)
-                              : CupertinoColors.clear,
+                              : const Color(0x00000000),
                           width: 2,
                         ),
                       ),

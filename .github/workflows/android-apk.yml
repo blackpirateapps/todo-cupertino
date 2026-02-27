@@ -41,12 +41,10 @@ jobs:
               perl -0777 -i -pe 's/dependencies\s*\{\n/dependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"\n/s' android/app/build.gradle
             fi
             if ! grep -q "desugar_jdk_libs" android/app/build.gradle; then
-              cat <<'EOG' >> android/app/build.gradle
-
-dependencies {
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
-}
-EOG
+              printf '\n%s\n%s\n%s\n' \
+                'dependencies {' \
+                '    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"' \
+                '}' >> android/app/build.gradle
             fi
           fi
 
@@ -58,12 +56,10 @@ EOG
               perl -0777 -i -pe 's/dependencies\s*\{\n/dependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n/s' android/app/build.gradle.kts
             fi
             if ! grep -q "desugar_jdk_libs" android/app/build.gradle.kts; then
-              cat <<'EOK' >> android/app/build.gradle.kts
-
-dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-}
-EOK
+              printf '\n%s\n%s\n%s\n' \
+                'dependencies {' \
+                '    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")' \
+                '}' >> android/app/build.gradle.kts
             fi
           fi
 

@@ -64,6 +64,20 @@ const Map<String, IconData> kListIconMap = {
   'game_controller_fill': CupertinoIcons.circle_fill,
 };
 
+const Map<String, Color> kListColorMap = {
+  'blue': CupertinoColors.activeBlue,
+  'green': CupertinoColors.activeGreen,
+  'orange': CupertinoColors.systemOrange,
+  'red': CupertinoColors.systemRed,
+  'pink': CupertinoColors.systemPink,
+  'teal': CupertinoColors.systemTeal,
+  'indigo': CupertinoColors.systemIndigo,
+};
+
 IconData iconForKey(String key) {
   return kListIconMap[key] ?? CupertinoIcons.folder_fill;
+}
+
+Color colorForListKey(String key) {
+  return kListColorMap[key] ?? CupertinoColors.activeBlue;
 }

@@ -30,6 +30,7 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
   late String _listId;
 
   final List<TextEditingController> _subtaskControllers = [];
+  final List<FocusNode> _subtaskFocusNodes = [];
   final List<bool> _subtaskCompleted = [];
   final List<String> _subtaskIds = [];
 
@@ -51,6 +52,7 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
     final subtasks = task?.subtasks ?? <Subtask>[];
     for (final subtask in subtasks) {
       _subtaskControllers.add(TextEditingController(text: subtask.title));
+      _subtaskFocusNodes.add(FocusNode());
       _subtaskCompleted.add(subtask.isCompleted);
       _subtaskIds.add(subtask.id);
     }
@@ -62,6 +64,9 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
     _notesController.dispose();
     for (final controller in _subtaskControllers) {
       controller.dispose();
+    }
+    for (final node in _subtaskFocusNodes) {
+      node.dispose();
     }
     super.dispose();
   }
@@ -138,19 +143,18 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
                   Expanded(
                     child: CupertinoSlidingSegmentedControl<TaskPriority>(
                       groupValue: _priority,
-                      children: const {
-                        TaskPriority.low: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Low'),
-                        ),
-                        TaskPriority.medium: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Medium'),
-                        ),
-                        TaskPriority.high: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('High'),
-                        ),
+                      children: {
+                        for (final priority in TaskPriority.values)
+                          priority: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text(
+                              priority.label,
+                              style: TextStyle(
+                                color: _priorityColor(priority),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                       },
                       onValueChanged: (value) {
                         if (value == null) return;
@@ -181,11 +185,14 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
                   for (var i = 0; i < _subtaskControllers.length; i++) ...[
                     _SubtaskRow(
                       controller: _subtaskControllers[i],
+                      focusNode: _subtaskFocusNodes[i],
                       completed: _subtaskCompleted[i],
                       onToggle: () => setState(
                         () => _subtaskCompleted[i] = !_subtaskCompleted[i],
                       ),
                       onRemove: () => _removeSubtask(i),
+                      onSubmitted: () =>
+                          _insertSubtask(i + 1, requestFocus: true),
                     ),
                     if (i != _subtaskControllers.length - 1) _line(context),
                   ],
@@ -224,9 +231,19 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
                 const Expanded(
                   child: Text('Completed', style: TextStyle(fontSize: 16)),
                 ),
-                CupertinoSwitch(
-                  value: _isCompleted,
-                  onChanged: (value) => setState(() => _isCompleted = value),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size.square(28),
+                  onPressed: () => setState(() => _isCompleted = !_isCompleted),
+                  child: Icon(
+                    _isCompleted
+                        ? CupertinoIcons.check_mark_square_fill
+                        : CupertinoIcons.square,
+                    size: 26,
+                    color: _isCompleted
+                        ? CupertinoColors.activeBlue
+                        : CupertinoColors.inactiveGray,
+                  ),
                 ),
               ],
             ),
@@ -251,18 +268,43 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
     );
   }
 
-  void _addSubtask() {
+  Color _priorityColor(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.low:
+        return CupertinoColors.activeGreen;
+      case TaskPriority.medium:
+        return CupertinoColors.systemOrange;
+      case TaskPriority.high:
+        return CupertinoColors.systemRed;
+    }
+  }
+
+  void _addSubtask() =>
+      _insertSubtask(_subtaskControllers.length, requestFocus: true);
+
+  void _insertSubtask(int index, {bool requestFocus = false}) {
+    final target = index.clamp(0, _subtaskControllers.length);
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
     setState(() {
-      _subtaskControllers.add(TextEditingController());
-      _subtaskCompleted.add(false);
-      _subtaskIds.add(generateId());
+      _subtaskControllers.insert(target, controller);
+      _subtaskFocusNodes.insert(target, focusNode);
+      _subtaskCompleted.insert(target, false);
+      _subtaskIds.insert(target, generateId());
+    });
+    if (!requestFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      focusNode.requestFocus();
     });
   }
 
   void _removeSubtask(int index) {
     setState(() {
       _subtaskControllers[index].dispose();
+      _subtaskFocusNodes[index].dispose();
       _subtaskControllers.removeAt(index);
+      _subtaskFocusNodes.removeAt(index);
       _subtaskCompleted.removeAt(index);
       _subtaskIds.removeAt(index);
     });
@@ -488,13 +530,17 @@ class _SettingRow extends StatelessWidget {
             label,
             style: TextStyle(color: CupertinoColors.label.resolveFrom(context)),
           ),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: CupertinoColors.secondaryLabel),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                maxLines: 1,
+                textAlign: TextAlign.right,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: CupertinoColors.secondaryLabel),
+              ),
             ),
           ),
           const SizedBox(width: 4),
@@ -508,15 +554,19 @@ class _SettingRow extends StatelessWidget {
 class _SubtaskRow extends StatelessWidget {
   const _SubtaskRow({
     required this.controller,
+    required this.focusNode,
     required this.completed,
     required this.onToggle,
     required this.onRemove,
+    required this.onSubmitted,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final bool completed;
   final VoidCallback onToggle;
   final VoidCallback onRemove;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -535,7 +585,10 @@ class _SubtaskRow extends StatelessWidget {
         Expanded(
           child: CupertinoTextField(
             controller: controller,
+            focusNode: focusNode,
             placeholder: 'Subtask',
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => onSubmitted(),
             decoration: const BoxDecoration(color: CupertinoColors.transparent),
           ),
         ),

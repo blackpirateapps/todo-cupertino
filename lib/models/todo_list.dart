@@ -8,6 +8,7 @@ class TodoList {
     required this.name,
     required this.description,
     required this.iconKey,
+    required this.colorKey,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -16,6 +17,7 @@ class TodoList {
   final String name;
   final String description;
   final String iconKey;
+  final String colorKey;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +27,7 @@ class TodoList {
     String? name,
     String? description,
     String? iconKey,
+    String? colorKey,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -33,6 +36,7 @@ class TodoList {
       name: name ?? this.name,
       description: description ?? this.description,
       iconKey: iconKey ?? this.iconKey,
+      colorKey: colorKey ?? this.colorKey,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -44,6 +48,7 @@ class TodoList {
       'name': name,
       'description': description,
       'iconKey': iconKey,
+      'colorKey': colorKey,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -55,6 +60,7 @@ class TodoList {
       name: json['name']?.toString() ?? 'Untitled',
       description: json['description']?.toString() ?? '',
       iconKey: json['iconKey']?.toString() ?? 'person_fill',
+      colorKey: json['colorKey']?.toString() ?? 'blue',
       createdAt:
           DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),

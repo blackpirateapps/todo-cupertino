@@ -9,14 +9,30 @@ import 'list_detail_page.dart';
 import 'list_editor_page.dart';
 import 'task_editor_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.state, required this.onStartFocus});
 
   final AppState state;
   final void Function(Task task) onStartFocus;
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String _searchText = '';
+
+  @override
   Widget build(BuildContext context) {
+    bool matchesTask(Task task) {
+      if (_searchText.trim().isEmpty) return true;
+      final query = _searchText.trim().toLowerCase();
+      final listName = widget.state.listNameForTask(task).toLowerCase();
+      return task.title.toLowerCase().contains(query) ||
+          task.description.toLowerCase().contains(query) ||
+          listName.contains(query);
+    }
+
     return CupertinoPageScaffold(
       backgroundColor: CupertinoDynamicColor.resolve(
         CupertinoColors.systemGroupedBackground,
@@ -25,42 +41,50 @@ class HomePage extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: AnimatedBuilder(
-          animation: state,
+          animation: widget.state,
           builder: (context, _) {
-            final allTodayTasks = state.tasksDueToday();
-            final displayToday = state.homeTodayTasks().take(3).toList();
+            final allTodayTasks = widget.state.tasksDueToday();
+            final visibleTodayTasks = allTodayTasks.where(matchesTask).toList();
+            final displayToday =
+                (_searchText.trim().isEmpty
+                        ? widget.state.homeTodayTasks()
+                        : widget.state.sortedTasks(visibleTodayTasks))
+                    .take(3)
+                    .toList();
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
               children: [
                 _HomeHeader(onAvatarTap: () => _openTaskEditor(context)),
                 const SizedBox(height: 10),
-                const _SearchShell(),
+                _SearchShell(
+                  onChanged: (value) => setState(() => _searchText = value),
+                ),
                 const SizedBox(height: 16),
                 const _SectionTitle('Today'),
                 const SizedBox(height: 8),
                 _TodayCard(
-                  todayAllCount: allTodayTasks.length,
-                  todayCompleted: allTodayTasks
+                  todayAllCount: visibleTodayTasks.length,
+                  todayCompleted: visibleTodayTasks
                       .where((t) => t.isCompleted)
                       .length,
                   tasks: displayToday,
-                  state: state,
+                  state: widget.state,
                   onTaskTap: (task) => _openTaskEditor(context, task: task),
-                  onStartFocus: onStartFocus,
+                  onStartFocus: widget.onStartFocus,
                 ),
                 const SizedBox(height: 18),
                 const _SectionTitle('My Lists'),
                 const SizedBox(height: 8),
                 _MyListsRow(
-                  state: state,
+                  state: widget.state,
                   onListTap: (list) {
                     Navigator.of(context).push(
                       CupertinoPageRoute<void>(
                         builder: (_) => ListDetailPage(
-                          state: state,
+                          state: widget.state,
                           list: list,
-                          onStartFocus: onStartFocus,
+                          onStartFocus: widget.onStartFocus,
                         ),
                       ),
                     );
@@ -68,7 +92,7 @@ class HomePage extends StatelessWidget {
                   onAddTap: () {
                     Navigator.of(context).push(
                       CupertinoPageRoute<void>(
-                        builder: (_) => ListEditorPage(state: state),
+                        builder: (_) => ListEditorPage(state: widget.state),
                       ),
                     );
                   },
@@ -76,7 +100,11 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 18),
                 const _SectionTitle('Upcoming'),
                 const SizedBox(height: 8),
-                _UpcomingSection(state: state, onStartFocus: onStartFocus),
+                _UpcomingSection(
+                  state: widget.state,
+                  onStartFocus: widget.onStartFocus,
+                  searchText: _searchText,
+                ),
               ],
             );
           },
@@ -88,7 +116,8 @@ class HomePage extends StatelessWidget {
   Future<void> _openTaskEditor(BuildContext context, {Task? task}) async {
     await Navigator.of(context).push(
       CupertinoPageRoute<void>(
-        builder: (context) => TaskEditorPage(state: state, initialTask: task),
+        builder: (context) =>
+            TaskEditorPage(state: widget.state, initialTask: task),
       ),
     );
   }
@@ -142,11 +171,7 @@ class _HomeHeader extends StatelessWidget {
         const SizedBox(height: 4),
         const Text(
           'To-Do',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
-            color: CupertinoColors.black,
-          ),
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 2),
         Text(
@@ -190,33 +215,20 @@ class _HomeHeader extends StatelessWidget {
 }
 
 class _SearchShell extends StatelessWidget {
-  const _SearchShell();
+  const _SearchShell({required this.onChanged});
+
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFEFF3),
+        color: CupertinoColors.secondarySystemFill.resolveFrom(context),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Row(
-        children: [
-          Icon(
-            CupertinoIcons.search,
-            size: 18,
-            color: CupertinoColors.systemGrey,
-          ),
-          SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              'Search',
-              style: TextStyle(fontSize: 14, color: CupertinoColors.systemGrey),
-            ),
-          ),
-          Icon(CupertinoIcons.mic, size: 18, color: CupertinoColors.systemGrey),
-        ],
+      child: CupertinoSearchTextField(
+        onChanged: onChanged,
+        backgroundColor: CupertinoColors.transparent,
       ),
     );
   }
@@ -231,10 +243,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w700,
-        color: CupertinoColors.black,
+        color: CupertinoColors.label.resolveFrom(context),
       ),
     );
   }
@@ -281,10 +293,10 @@ class _TodayCard extends StatelessWidget {
                   children: [
                     Text(
                       '$todayCompleted/$todayAllCount',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: CupertinoColors.black,
+                        color: CupertinoColors.label.resolveFrom(context),
                       ),
                     ),
                     const Text(
@@ -384,7 +396,7 @@ class _TodayTaskRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: CupertinoColors.black,
+                      color: CupertinoColors.label.resolveFrom(context),
                       decoration: task.isCompleted
                           ? TextDecoration.lineThrough
                           : null,
@@ -499,8 +511,8 @@ class _ListTileCard extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
-              color: CupertinoColors.activeBlue,
+            decoration: BoxDecoration(
+              color: colorForListKey(list.colorKey),
               shape: BoxShape.circle,
             ),
             child: Icon(list.icon, color: CupertinoColors.white, size: 18),
@@ -510,10 +522,10 @@ class _ListTileCard extends StatelessWidget {
             list.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: CupertinoColors.black,
+              color: CupertinoColors.label.resolveFrom(context),
             ),
           ),
           const SizedBox(height: 2),
@@ -531,17 +543,32 @@ class _ListTileCard extends StatelessWidget {
 }
 
 class _UpcomingSection extends StatelessWidget {
-  const _UpcomingSection({required this.state, required this.onStartFocus});
+  const _UpcomingSection({
+    required this.state,
+    required this.onStartFocus,
+    required this.searchText,
+  });
 
   final AppState state;
   final void Function(Task task) onStartFocus;
+  final String searchText;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final query = searchText.trim().toLowerCase();
     final upcoming = state
         .tasksWithDueDate()
-        .where((t) => t.dueDate != null && !isSameDate(t.dueDate!, now))
+        .where((task) {
+          final isUpcoming =
+              task.dueDate != null && !isSameDate(task.dueDate!, now);
+          if (!isUpcoming) return false;
+          if (query.isEmpty) return true;
+          final listName = state.listNameForTask(task).toLowerCase();
+          return task.title.toLowerCase().contains(query) ||
+              task.description.toLowerCase().contains(query) ||
+              listName.contains(query);
+        })
         .take(5)
         .toList();
 
@@ -563,14 +590,19 @@ class _UpcomingSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               child: Row(
                 children: [
-                  Icon(
-                    upcoming[i].isCompleted
-                        ? CupertinoIcons.check_mark_circled_solid
-                        : CupertinoIcons.circle,
-                    size: 20,
-                    color: upcoming[i].isCompleted
-                        ? CupertinoColors.activeBlue
-                        : CupertinoColors.inactiveGray,
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size.square(24),
+                    onPressed: () => state.toggleTaskCompleted(upcoming[i].id),
+                    child: Icon(
+                      upcoming[i].isCompleted
+                          ? CupertinoIcons.check_mark_circled_solid
+                          : CupertinoIcons.circle,
+                      size: 20,
+                      color: upcoming[i].isCompleted
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.inactiveGray,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(

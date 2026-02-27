@@ -8,13 +8,18 @@
 ## Major Features
 - List management
   - Create lists with name, description, icon.
+  - Create lists with predefined color selection.
   - List tiles on Home open list detail pages.
 - Task management
   - Create/edit/delete tasks.
   - Fields: due date, repeat, list, priority, subtasks, notes, completed.
+  - Task editor supports rapid subtask entry (`Add Subtask` focuses input; Enter creates next).
+  - Priority is color-coded in task editing surfaces.
 - Home behavior
   - Today card aggregates tasks due today across all lists.
   - If due-today count > 3, home prioritizes high-priority tasks for display.
+  - Home search is functional (filters Today and Upcoming sections).
+  - Upcoming tasks can be marked completed directly from Home.
 - Focus/Pomodoro
   - Dedicated `Focus` tab with timer UI.
   - Current focus task can be selected in focus page.
@@ -44,9 +49,13 @@
 - `lib/pages/all_tasks_page.dart`
   - Redesigned tasks screen with segmented filters + search + play icon.
 - `lib/pages/home_page.dart`
-  - Dashboard with functional Today/My Lists/Upcoming + play icons.
+  - Dashboard with functional Today/My Lists/Upcoming + search + play icons.
 - `lib/pages/list_detail_page.dart`
   - Per-list task list with create/edit and play icon.
+- `lib/pages/list_editor_page.dart`
+  - List creation (name/description/icon/color).
+- `lib/pages/task_editor_page.dart`
+  - Full-page task create/edit with aligned setting values, checkbox completed state, and rapid subtask entry.
 - `lib/widgets/task_card.dart`
   - Shared task card used in scheduled/flagged/list detail; includes play icon.
 - `lib/pages/settings_page.dart`
@@ -58,7 +67,7 @@
 - `id`, `title`, `description`, `dueDate`, `repeat`, `listId`, `priority`, `subtasks`, `tags`, `isCompleted`, `createdAt`, `updatedAt`
 
 ### TodoList (`lib/models/todo_list.dart`)
-- `id`, `name`, `description`, `iconKey`, `createdAt`, `updatedAt`
+- `id`, `name`, `description`, `iconKey`, `colorKey`, `createdAt`, `updatedAt`
 
 ## Persistence Keys
 - Tasks: `tasks_v2` (legacy fallback/migration from `tasks_v1`)
@@ -68,7 +77,6 @@
 - Pomodoro break length: `pomodoro_break_minutes_v1`
 
 ## Known Gaps
-- Home search bar is still visual only.
 - `Flagged` tab maps to high-priority tasks (no separate flagged boolean yet).
 - No automated widget tests for focus timer/task-play flows yet.
 

@@ -90,8 +90,8 @@ class _FocusPageState extends State<FocusPage> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      color: CupertinoColors.black,
+                    style: TextStyle(
+                      color: CupertinoColors.label.resolveFrom(context),
                       fontSize: 48,
                       fontWeight: FontWeight.w700,
                     ),
@@ -156,7 +156,9 @@ class _FocusPageState extends State<FocusPage> {
                                 _isRunning
                                     ? CupertinoIcons.pause_solid
                                     : CupertinoIcons.play_fill,
-                                color: CupertinoColors.black,
+                                color: CupertinoColors.label.resolveFrom(
+                                  context,
+                                ),
                               ),
                             ),
                           ),
@@ -165,9 +167,13 @@ class _FocusPageState extends State<FocusPage> {
                             child: CupertinoButton(
                               color: CupertinoColors.systemGrey5,
                               onPressed: _startBreak,
-                              child: const Text(
+                              child: Text(
                                 'Break',
-                                style: TextStyle(color: CupertinoColors.black),
+                                style: TextStyle(
+                                  color: CupertinoColors.label.resolveFrom(
+                                    context,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -176,9 +182,13 @@ class _FocusPageState extends State<FocusPage> {
                             child: CupertinoButton(
                               color: CupertinoColors.systemGrey5,
                               onPressed: _resetFocusTimer,
-                              child: const Text(
+                              child: Text(
                                 'Reset',
-                                style: TextStyle(color: CupertinoColors.black),
+                                style: TextStyle(
+                                  color: CupertinoColors.label.resolveFrom(
+                                    context,
+                                  ),
+                                ),
                               ),
                             ),
                           ),

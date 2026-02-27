@@ -17,6 +17,7 @@ class _ListEditorPageState extends State<ListEditorPage> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _iconKey = 'folder_fill';
+  String _colorKey = 'blue';
 
   @override
   void dispose() {
@@ -79,8 +80,45 @@ class _ListEditorPageState extends State<ListEditorPage> {
                         entry.value,
                         color: _iconKey == entry.key
                             ? CupertinoColors.white
-                            : CupertinoColors.black,
+                            : CupertinoColors.label.resolveFrom(context),
                       ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'List Color',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final entry in kListColorMap.entries)
+                  GestureDetector(
+                    onTap: () => setState(() => _colorKey = entry.key),
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: entry.value,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _colorKey == entry.key
+                              ? CupertinoColors.label.resolveFrom(context)
+                              : CupertinoColors.clear,
+                          width: 2,
+                        ),
+                      ),
+                      child: _colorKey == entry.key
+                          ? const Icon(
+                              CupertinoIcons.check_mark,
+                              color: CupertinoColors.white,
+                              size: 16,
+                            )
+                          : null,
                     ),
                   ),
               ],
@@ -102,6 +140,7 @@ class _ListEditorPageState extends State<ListEditorPage> {
         name: name,
         description: _descriptionController.text.trim(),
         iconKey: _iconKey,
+        colorKey: _colorKey,
         createdAt: now,
         updatedAt: now,
       ),

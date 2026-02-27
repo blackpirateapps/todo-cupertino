@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 
 import '../models/task.dart';
+import '../models/todo_list.dart';
 import '../state/app_state.dart';
 import '../utils/app_utils.dart';
 import '../widgets/common_widgets.dart';
+import 'list_detail_page.dart';
+import 'list_editor_page.dart';
 import 'task_editor_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -23,7 +26,9 @@ class HomePage extends StatelessWidget {
         child: AnimatedBuilder(
           animation: state,
           builder: (context, _) {
-            final snapshot = _HomeDashboardSnapshot.fromState(state);
+            final allTodayTasks = state.tasksDueToday();
+            final displayToday = state.homeTodayTasks().take(3).toList();
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
               children: [
@@ -34,30 +39,39 @@ class HomePage extends StatelessWidget {
                 const _SectionTitle('Today'),
                 const SizedBox(height: 8),
                 _TodayCard(
-                  summary: snapshot.todaySummary,
-                  onTaskTap: (task) {
-                    if (task == null) return;
-                    _openTaskEditor(context, task: task);
-                  },
-                  onToggleTask: (task) {
-                    if (task == null) return;
-                    state.toggleTaskCompleted(task.id);
-                  },
+                  todayAllCount: allTodayTasks.length,
+                  todayCompleted: allTodayTasks
+                      .where((t) => t.isCompleted)
+                      .length,
+                  tasks: displayToday,
+                  state: state,
+                  onTaskTap: (task) => _openTaskEditor(context, task: task),
                 ),
                 const SizedBox(height: 18),
                 const _SectionTitle('My Lists'),
                 const SizedBox(height: 8),
-                _ListTilesRow(
-                  items: snapshot.listSummaries,
-                  onAddTap: () => _openTaskEditor(context),
+                _MyListsRow(
+                  state: state,
+                  onListTap: (list) {
+                    Navigator.of(context).push(
+                      CupertinoPageRoute<void>(
+                        builder: (_) =>
+                            ListDetailPage(state: state, list: list),
+                      ),
+                    );
+                  },
+                  onAddTap: () {
+                    Navigator.of(context).push(
+                      CupertinoPageRoute<void>(
+                        builder: (_) => ListEditorPage(state: state),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 18),
                 const _SectionTitle('Upcoming'),
                 const SizedBox(height: 8),
-                for (final group in snapshot.upcomingGroups) ...[
-                  _UpcomingGroupCard(group: group),
-                  const SizedBox(height: 10),
-                ],
+                _UpcomingSection(state: state),
               ],
             );
           },
@@ -223,17 +237,24 @@ class _SectionTitle extends StatelessWidget {
 
 class _TodayCard extends StatelessWidget {
   const _TodayCard({
-    required this.summary,
+    required this.todayAllCount,
+    required this.todayCompleted,
+    required this.tasks,
+    required this.state,
     required this.onTaskTap,
-    required this.onToggleTask,
   });
 
-  final _TodaySummary summary;
-  final void Function(Task? task) onTaskTap;
-  final void Function(Task? task) onToggleTask;
+  final int todayAllCount;
+  final int todayCompleted;
+  final List<Task> tasks;
+  final AppState state;
+  final void Function(Task task) onTaskTap;
 
   @override
   Widget build(BuildContext context) {
+    final total = todayAllCount == 0 ? 1 : todayAllCount;
+    final progress = todayCompleted / total;
+
     return SectionCard(
       padding: const EdgeInsets.all(10),
       child: Row(
@@ -246,13 +267,13 @@ class _TodayCard extends StatelessWidget {
               children: [
                 CustomPaint(
                   size: const Size.square(112),
-                  painter: _RingPainter(progress: summary.progress),
+                  painter: _RingPainter(progress: progress),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '${summary.completed}/${summary.total}',
+                      '$todayCompleted/$todayAllCount',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -274,25 +295,32 @@ class _TodayCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              children: [
-                for (var i = 0; i < summary.rows.length; i++) ...[
-                  _TodayTaskRow(
-                    row: summary.rows[i],
-                    onTap: () => onTaskTap(summary.rows[i].task),
-                    onToggle: () => onToggleTask(summary.rows[i].task),
+            child: tasks.isEmpty
+                ? const Text(
+                    'No tasks due today',
+                    style: TextStyle(color: CupertinoColors.secondaryLabel),
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < tasks.length; i++) ...[
+                        _TodayTaskRow(
+                          task: tasks[i],
+                          listName: state.listNameForTask(tasks[i]),
+                          onTap: () => onTaskTap(tasks[i]),
+                          onToggle: () =>
+                              state.toggleTaskCompleted(tasks[i].id),
+                        ),
+                        if (i != tasks.length - 1)
+                          Container(
+                            height: 0.5,
+                            color: CupertinoDynamicColor.resolve(
+                              CupertinoColors.separator,
+                              context,
+                            ),
+                          ),
+                      ],
+                    ],
                   ),
-                  if (i != summary.rows.length - 1)
-                    Container(
-                      height: 0.5,
-                      color: CupertinoDynamicColor.resolve(
-                        CupertinoColors.separator,
-                        context,
-                      ),
-                    ),
-                ],
-              ],
-            ),
           ),
         ],
       ),
@@ -302,12 +330,14 @@ class _TodayCard extends StatelessWidget {
 
 class _TodayTaskRow extends StatelessWidget {
   const _TodayTaskRow({
-    required this.row,
+    required this.task,
+    required this.listName,
     required this.onTap,
     required this.onToggle,
   });
 
-  final _TodayTaskRowData row;
+  final Task task;
+  final String listName;
   final VoidCallback onTap;
   final VoidCallback onToggle;
 
@@ -315,19 +345,19 @@ class _TodayTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: row.task == null ? null : onTap,
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
           children: [
             GestureDetector(
-              onTap: row.task == null ? null : onToggle,
+              onTap: onToggle,
               child: Icon(
-                row.isCompleted
+                task.isCompleted
                     ? CupertinoIcons.check_mark_circled_solid
                     : CupertinoIcons.circle,
                 size: 20,
-                color: row.isCompleted
+                color: task.isCompleted
                     ? CupertinoColors.activeBlue
                     : CupertinoColors.inactiveGray,
               ),
@@ -338,40 +368,26 @@ class _TodayTaskRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    row.title,
+                    task.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: CupertinoColors.black,
-                      decoration: row.isCompleted
+                      decoration: task.isCompleted
                           ? TextDecoration.lineThrough
                           : null,
                     ),
                   ),
-                  if (row.badgeText != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: row.badgeColor,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          row.badgeText!,
-                          style: const TextStyle(
-                            color: CupertinoColors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '$listName • ${task.priority.label}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: CupertinoColors.secondaryLabel,
                     ),
+                  ),
                 ],
               ),
             ),
@@ -382,20 +398,35 @@ class _TodayTaskRow extends StatelessWidget {
   }
 }
 
-class _ListTilesRow extends StatelessWidget {
-  const _ListTilesRow({required this.items, required this.onAddTap});
+class _MyListsRow extends StatelessWidget {
+  const _MyListsRow({
+    required this.state,
+    required this.onListTap,
+    required this.onAddTap,
+  });
 
-  final List<_ListSummary> items;
+  final AppState state;
+  final void Function(TodoList list) onListTap;
   final VoidCallback onAddTap;
 
   @override
   Widget build(BuildContext context) {
+    final lists = state.lists.take(3).toList();
+
     return SizedBox(
       height: 106,
       child: Row(
         children: [
-          for (final item in items) ...[
-            Expanded(child: _ListTileCard(item: item)),
+          for (final list in lists) ...[
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onListTap(list),
+                child: _ListTileCard(
+                  list: list,
+                  count: state.tasksForList(list.id).length,
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
           ],
           Expanded(
@@ -426,9 +457,10 @@ class _ListTilesRow extends StatelessWidget {
 }
 
 class _ListTileCard extends StatelessWidget {
-  const _ListTileCard({required this.item});
+  const _ListTileCard({required this.list, required this.count});
 
-  final _ListSummary item;
+  final TodoList list;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -447,15 +479,15 @@ class _ListTileCard extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: BoxDecoration(
-              color: item.color,
+            decoration: const BoxDecoration(
+              color: CupertinoColors.activeBlue,
               shape: BoxShape.circle,
             ),
-            child: Icon(item.icon, color: CupertinoColors.white, size: 18),
+            child: Icon(list.icon, color: CupertinoColors.white, size: 18),
           ),
           const Spacer(),
           Text(
-            item.title,
+            list.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -466,7 +498,7 @@ class _ListTileCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${item.taskCount} tasks',
+            '$count tasks',
             style: const TextStyle(
               fontSize: 12,
               color: CupertinoColors.systemGrey,
@@ -478,98 +510,75 @@ class _ListTileCard extends StatelessWidget {
   }
 }
 
-class _UpcomingGroupCard extends StatelessWidget {
-  const _UpcomingGroupCard({required this.group});
+class _UpcomingSection extends StatelessWidget {
+  const _UpcomingSection({required this.state});
 
-  final _UpcomingGroup group;
+  final AppState state;
 
   @override
   Widget build(BuildContext context) {
-    final separator = CupertinoDynamicColor.resolve(
-      CupertinoColors.separator,
-      context,
-    );
+    final now = DateTime.now();
+    final upcoming = state
+        .tasksWithDueDate()
+        .where((t) => t.dueDate != null && !isSameDate(t.dueDate!, now))
+        .take(5)
+        .toList();
+
+    if (upcoming.isEmpty) {
+      return const SectionCard(
+        child: Text(
+          'No upcoming tasks',
+          style: TextStyle(color: CupertinoColors.secondaryLabel),
+        ),
+      );
+    }
+
     return SectionCard(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F1F5),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
+          for (var i = 0; i < upcoming.length; i++) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(
+                children: [
+                  Icon(
+                    upcoming[i].isCompleted
+                        ? CupertinoIcons.check_mark_circled_solid
+                        : CupertinoIcons.circle,
+                    size: 20,
+                    color: upcoming[i].isCompleted
+                        ? CupertinoColors.activeBlue
+                        : CupertinoColors.inactiveGray,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      upcoming[i].title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    formatTimeOnly(upcoming[i].dueDate!),
+                    style: const TextStyle(
+                      color: CupertinoColors.systemGrey,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
-              border: Border(bottom: BorderSide(color: separator, width: 0.4)),
             ),
-            child: Text(
-              group.label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: CupertinoColors.systemGrey,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          for (var i = 0; i < group.items.length; i++) ...[
-            _UpcomingRow(item: group.items[i]),
-            if (i != group.items.length - 1)
-              Padding(
-                padding: const EdgeInsets.only(left: 36),
-                child: Container(height: 0.4, color: separator),
+            if (i != upcoming.length - 1)
+              Container(
+                margin: const EdgeInsets.only(left: 36),
+                height: 0.4,
+                color: CupertinoDynamicColor.resolve(
+                  CupertinoColors.separator,
+                  context,
+                ),
               ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _UpcomingRow extends StatelessWidget {
-  const _UpcomingRow({required this.item});
-
-  final _UpcomingItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      child: Row(
-        children: [
-          Icon(
-            item.isCompleted
-                ? CupertinoIcons.check_mark_circled_solid
-                : CupertinoIcons.circle,
-            size: 20,
-            color: item.isCompleted
-                ? CupertinoColors.activeBlue
-                : CupertinoColors.inactiveGray,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              item.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                color: CupertinoColors.black,
-                decoration: item.isCompleted
-                    ? TextDecoration.lineThrough
-                    : null,
-              ),
-            ),
-          ),
-          if (item.timeLabel != null)
-            Text(
-              item.timeLabel!,
-              style: const TextStyle(
-                fontSize: 13,
-                color: CupertinoColors.systemGrey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
         ],
       ),
     );
@@ -624,234 +633,4 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(covariant _RingPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
-}
-
-class _HomeDashboardSnapshot {
-  _HomeDashboardSnapshot({
-    required this.todaySummary,
-    required this.listSummaries,
-    required this.upcomingGroups,
-  });
-
-  final _TodaySummary todaySummary;
-  final List<_ListSummary> listSummaries;
-  final List<_UpcomingGroup> upcomingGroups;
-
-  factory _HomeDashboardSnapshot.fromState(AppState state) {
-    final sorted = state.sortedTasks();
-    final now = DateTime.now();
-    final todayTasks = state.tasksDueToday();
-    final totalForRing = todayTasks.isEmpty
-        ? 6
-        : todayTasks.length.clamp(1, 99);
-    final completedForRing = todayTasks.isEmpty
-        ? 4
-        : todayTasks.where((t) => t.isCompleted).length.clamp(0, totalForRing);
-
-    final todayRows = <_TodayTaskRowData>[];
-    for (final task in todayTasks.take(3)) {
-      final badge = task.dueDate != null ? formatTimeOnly(task.dueDate!) : null;
-      todayRows.add(
-        _TodayTaskRowData(
-          title: task.title,
-          badgeText: badge,
-          badgeColor: const Color(0xFF1677FF),
-          isCompleted: task.isCompleted,
-          task: task,
-        ),
-      );
-    }
-    if (todayRows.isEmpty) {
-      todayRows.addAll(const [
-        _TodayTaskRowData(
-          title: 'Morning Meeting',
-          badgeText: '9 50 AM',
-          badgeColor: Color(0xFF1677FF),
-          isCompleted: false,
-        ),
-        _TodayTaskRowData(
-          title: 'Grocery Shopping',
-          badgeText: '5 60 PM',
-          badgeColor: Color(0xFF34C759),
-          isCompleted: false,
-        ),
-        _TodayTaskRowData(title: 'Read Book', isCompleted: false),
-      ]);
-    } else {
-      while (todayRows.length < 3) {
-        todayRows.add(
-          const _TodayTaskRowData(
-            title: 'Open All tab to add more',
-            isCompleted: false,
-          ),
-        );
-      }
-    }
-
-    final byProject = state.tasksByProject();
-    final preferred = ['Personal', 'Work', 'Groceries'];
-    final colors = [
-      const Color(0xFF1F8BFF),
-      const Color(0xFFFF9500),
-      const Color(0xFF34C759),
-    ];
-    final icons = [
-      CupertinoIcons.person_fill,
-      CupertinoIcons.briefcase_fill,
-      CupertinoIcons.cart_fill,
-    ];
-
-    final listSummaries = <_ListSummary>[];
-    for (var i = 0; i < preferred.length; i++) {
-      final key = preferred[i];
-      final actual = byProject[key]?.length;
-      final fallbackCounts = [12, 8, 5];
-      listSummaries.add(
-        _ListSummary(
-          title: key,
-          taskCount: actual ?? fallbackCounts[i],
-          color: colors[i],
-          icon: icons[i],
-        ),
-      );
-    }
-
-    final upcoming =
-        sorted
-            .where((t) => t.dueDate != null && !isSameDate(t.dueDate!, now))
-            .toList()
-          ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
-
-    final groupsByLabel = <String, List<_UpcomingItem>>{};
-    for (final task in upcoming.take(5)) {
-      final due = task.dueDate!;
-      final tomorrow = now.add(const Duration(days: 1));
-      final label = isSameDate(due, tomorrow)
-          ? 'Tomorrow'
-          : _groupDateLabel(due);
-      groupsByLabel
-          .putIfAbsent(label, () => [])
-          .add(
-            _UpcomingItem(
-              title: task.title,
-              timeLabel: formatTimeOnly(due),
-              isCompleted: task.isCompleted,
-            ),
-          );
-    }
-
-    final upcomingGroups = groupsByLabel.entries
-        .map((e) => _UpcomingGroup(label: e.key, items: e.value))
-        .toList();
-
-    if (upcomingGroups.isEmpty) {
-      upcomingGroups.addAll(const [
-        _UpcomingGroup(
-          label: 'Tomorrow',
-          items: [
-            _UpcomingItem(title: 'Dentist Appointment', timeLabel: '10:00 AM'),
-            _UpcomingItem(title: 'Submit Report', timeLabel: '2:00 PM'),
-          ],
-        ),
-        _UpcomingGroup(
-          label: 'Thursday, Oct 28',
-          items: [
-            _UpcomingItem(title: 'Lunch with Sarah', timeLabel: '12:30 PM'),
-          ],
-        ),
-      ]);
-    }
-
-    return _HomeDashboardSnapshot(
-      todaySummary: _TodaySummary(
-        completed: completedForRing,
-        total: totalForRing,
-        rows: todayRows.take(3).toList(),
-      ),
-      listSummaries: listSummaries,
-      upcomingGroups: upcomingGroups,
-    );
-  }
-
-  static String _groupDateLabel(DateTime value) {
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${weekdays[value.weekday - 1]}, ${months[value.month - 1]} ${value.day}';
-  }
-}
-
-class _TodaySummary {
-  const _TodaySummary({
-    required this.completed,
-    required this.total,
-    required this.rows,
-  });
-
-  final int completed;
-  final int total;
-  final List<_TodayTaskRowData> rows;
-
-  double get progress => total == 0 ? 0 : completed / total;
-}
-
-class _TodayTaskRowData {
-  const _TodayTaskRowData({
-    required this.title,
-    this.badgeText,
-    this.badgeColor = const Color(0xFF1677FF),
-    this.isCompleted = false,
-    this.task,
-  });
-
-  final String title;
-  final String? badgeText;
-  final Color badgeColor;
-  final bool isCompleted;
-  final Task? task;
-}
-
-class _ListSummary {
-  const _ListSummary({
-    required this.title,
-    required this.taskCount,
-    required this.color,
-    required this.icon,
-  });
-
-  final String title;
-  final int taskCount;
-  final Color color;
-  final IconData icon;
-}
-
-class _UpcomingGroup {
-  const _UpcomingGroup({required this.label, required this.items});
-
-  final String label;
-  final List<_UpcomingItem> items;
-}
-
-class _UpcomingItem {
-  const _UpcomingItem({
-    required this.title,
-    this.timeLabel,
-    this.isCompleted = false,
-  });
-
-  final String title;
-  final String? timeLabel;
-  final bool isCompleted;
 }

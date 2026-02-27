@@ -1,15 +1,21 @@
 import 'package:flutter/cupertino.dart';
 
 import '../models/task.dart';
+import '../models/todo_list.dart';
 import '../state/app_state.dart';
 import '../utils/app_utils.dart';
-import '../widgets/common_widgets.dart';
 
 class TaskEditorPage extends StatefulWidget {
-  const TaskEditorPage({super.key, required this.state, this.initialTask});
+  const TaskEditorPage({
+    super.key,
+    required this.state,
+    this.initialTask,
+    this.initialListId,
+  });
 
   final AppState state;
   final Task? initialTask;
+  final String? initialListId;
 
   @override
   State<TaskEditorPage> createState() => _TaskEditorPageState();
@@ -17,11 +23,12 @@ class TaskEditorPage extends StatefulWidget {
 
 class _TaskEditorPageState extends State<TaskEditorPage> {
   late final TextEditingController _titleController;
-  late final TextEditingController _descriptionController;
-  late final TextEditingController _projectController;
-  late final TextEditingController _tagsController;
+  late final TextEditingController _notesController;
   late bool _isCompleted;
+  late TaskRepeat _repeat;
+  late TaskPriority _priority;
   DateTime? _dueDate;
+  late String _listId;
 
   final List<TextEditingController> _subtaskControllers = [];
   final List<bool> _subtaskCompleted = [];
@@ -33,16 +40,14 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
   void initState() {
     super.initState();
     final task = widget.initialTask;
+    final fallbackListId = widget.initialListId ?? widget.state.lists.first.id;
     _titleController = TextEditingController(text: task?.title ?? '');
-    _descriptionController = TextEditingController(
-      text: task?.description ?? '',
-    );
-    _projectController = TextEditingController(text: task?.project ?? '');
-    _tagsController = TextEditingController(
-      text: (task?.tags ?? []).join(', '),
-    );
+    _notesController = TextEditingController(text: task?.description ?? '');
     _isCompleted = task?.isCompleted ?? false;
+    _repeat = task?.repeat ?? TaskRepeat.none;
+    _priority = task?.priority ?? TaskPriority.medium;
     _dueDate = task?.dueDate;
+    _listId = task?.listId ?? fallbackListId;
 
     final subtasks = task?.subtasks ?? <Subtask>[];
     for (final subtask in subtasks) {
@@ -55,9 +60,7 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
-    _projectController.dispose();
-    _tagsController.dispose();
+    _notesController.dispose();
     for (final controller in _subtaskControllers) {
       controller.dispose();
     }
@@ -66,203 +69,186 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final title = _isEditing ? 'Edit Task' : 'New Task';
+    final list = widget.state.listById(_listId);
+
     return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.systemGroupedBackground,
       navigationBar: CupertinoNavigationBar(
-        middle: Text(title),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        middle: Text(_isEditing ? 'Edit Task' : 'New Task'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _saveTask,
-          child: const Text('Save'),
+          child: const Text('Done'),
         ),
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 22),
           children: [
-            SectionCard(
+            CupertinoTextField(
+              controller: _titleController,
+              placeholder: 'Write project report',
+              style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w300),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              decoration: const BoxDecoration(
+                color: CupertinoColors.transparent,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _Panel(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const FieldLabel('Title'),
-                  const SizedBox(height: 6),
-                  CupertinoTextField(
-                    controller: _titleController,
-                    placeholder: 'Task title',
+                  _SettingRow(
+                    icon: CupertinoIcons.calendar,
+                    label: 'Date:',
+                    value: _dueDate == null
+                        ? 'No date'
+                        : formatDateTime(_dueDate!),
+                    onTap: _pickDueDate,
                   ),
-                  const SizedBox(height: 12),
-                  const FieldLabel('Description'),
-                  const SizedBox(height: 6),
-                  CupertinoTextField(
-                    controller: _descriptionController,
-                    placeholder: 'Details',
-                    minLines: 3,
-                    maxLines: 5,
+                  _line(context),
+                  _SettingRow(
+                    icon: CupertinoIcons.repeat,
+                    label: 'Repeat:',
+                    value: _repeat.label,
+                    onTap: _pickRepeat,
                   ),
-                  const SizedBox(height: 12),
-                  const FieldLabel('Project'),
-                  const SizedBox(height: 6),
-                  CupertinoTextField(
-                    controller: _projectController,
-                    placeholder: 'e.g. Personal, Work',
-                  ),
-                  const SizedBox(height: 12),
-                  const FieldLabel('Tags'),
-                  const SizedBox(height: 6),
-                  CupertinoTextField(
-                    controller: _tagsController,
-                    placeholder: 'Comma-separated tags',
+                  _line(context),
+                  _SettingRow(
+                    icon: CupertinoIcons.list_bullet,
+                    label: 'List:',
+                    value: list?.name ?? 'Unknown',
+                    onTap: _pickList,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            SectionCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            _Panel(
+              child: Row(
                 children: [
-                  const FieldLabel('Due Date'),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _dueDate == null
-                              ? 'No due date'
-                              : formatDateTime(_dueDate!),
-                          style: const TextStyle(fontSize: 15),
+                  const Icon(CupertinoIcons.tag, size: 18),
+                  const SizedBox(width: 10),
+                  const Text('Priority:'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: CupertinoSlidingSegmentedControl<TaskPriority>(
+                      groupValue: _priority,
+                      children: const {
+                        TaskPriority.low: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text('Low'),
                         ),
-                      ),
-                      CupertinoButton(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                        TaskPriority.medium: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text('Medium'),
                         ),
-                        onPressed: _pickDueDate,
-                        child: const Text('Pick'),
-                      ),
-                      if (_dueDate != null)
-                        CupertinoButton(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          onPressed: () => setState(() => _dueDate = null),
-                          child: const Text('Clear'),
+                        TaskPriority.high: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6),
+                          child: Text('High'),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Completed',
-                          style: TextStyle(fontSize: 15),
-                        ),
-                      ),
-                      CupertinoSwitch(
-                        value: _isCompleted,
-                        onChanged: (value) =>
-                            setState(() => _isCompleted = value),
-                      ),
-                    ],
+                      },
+                      onValueChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _priority = value);
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            SectionCard(
+            const SizedBox(height: 14),
+            const Text(
+              'Subtasks',
+              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            _Panel(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Subtasks',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: _addSubtask,
-                        child: const Icon(CupertinoIcons.add_circled),
-                      ),
-                    ],
-                  ),
                   if (_subtaskControllers.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.only(top: 6),
+                      padding: EdgeInsets.symmetric(vertical: 12),
                       child: Text(
-                        'No subtasks yet.',
-                        style: TextStyle(fontSize: 14),
+                        'No subtasks yet',
+                        style: TextStyle(color: CupertinoColors.secondaryLabel),
                       ),
                     ),
-                  for (var i = 0; i < _subtaskControllers.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          CupertinoSwitch(
-                            value: _subtaskCompleted[i],
-                            onChanged: (value) {
-                              setState(() {
-                                _subtaskCompleted[i] = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: CupertinoTextField(
-                              controller: _subtaskControllers[i],
-                              placeholder: 'Subtask',
-                            ),
-                          ),
-                          CupertinoButton(
-                            padding: const EdgeInsets.only(left: 6),
-                            onPressed: () => _removeSubtask(i),
-                            child: const Icon(
-                              CupertinoIcons.minus_circle,
-                              color: CupertinoColors.systemRed,
-                            ),
-                          ),
-                        ],
+                  for (var i = 0; i < _subtaskControllers.length; i++) ...[
+                    _SubtaskRow(
+                      controller: _subtaskControllers[i],
+                      completed: _subtaskCompleted[i],
+                      onToggle: () => setState(
+                        () => _subtaskCompleted[i] = !_subtaskCompleted[i],
                       ),
+                      onRemove: () => _removeSubtask(i),
                     ),
+                    if (i != _subtaskControllers.length - 1) _line(context),
+                  ],
+                  if (_subtaskControllers.isNotEmpty) _line(context),
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    alignment: Alignment.centerLeft,
+                    onPressed: _addSubtask,
+                    child: const Row(
+                      children: [
+                        Icon(CupertinoIcons.add, size: 20),
+                        SizedBox(width: 6),
+                        Text('Add Subtask'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-            if (_isEditing) ...[
-              const SizedBox(height: 12),
-              SectionCard(
-                child: CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: _confirmDelete,
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        CupertinoIcons.delete,
-                        color: CupertinoColors.systemRed,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Delete Task',
-                        style: TextStyle(color: CupertinoColors.systemRed),
-                      ),
-                    ],
-                  ),
+            const SizedBox(height: 12),
+            _Panel(
+              child: CupertinoTextField(
+                controller: _notesController,
+                placeholder: 'Notes and details...',
+                minLines: 3,
+                maxLines: 6,
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: CupertinoColors.transparent,
                 ),
               ),
-            ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Completed', style: TextStyle(fontSize: 16)),
+                ),
+                CupertinoSwitch(
+                  value: _isCompleted,
+                  onChanged: (value) => setState(() => _isCompleted = value),
+                ),
+              ],
+            ),
+            if (_isEditing)
+              CupertinoButton(
+                onPressed: _confirmDelete,
+                child: const Text(
+                  'Delete Task',
+                  style: TextStyle(color: CupertinoColors.systemRed),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _line(BuildContext context) {
+    return Container(
+      height: 0.5,
+      color: CupertinoDynamicColor.resolve(CupertinoColors.separator, context),
     );
   }
 
@@ -285,58 +271,34 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
 
   Future<void> _pickDueDate() async {
     final now = DateTime.now();
-    final initial = _dueDate ?? DateTime(now.year, now.month, now.day, 9);
+    final initial = _dueDate ?? DateTime(now.year, now.month, now.day, 10);
     var selected = initial;
 
-    final picked = await showCupertinoModalPopup<DateTime?>(
+    final picked = await showCupertinoModalPopup<DateTime>(
       context: context,
       builder: (context) {
-        final bg = CupertinoDynamicColor.resolve(
-          CupertinoColors.systemBackground,
-          context,
-        );
         return Container(
           height: 320,
-          color: bg,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
           child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: CupertinoDynamicColor.resolve(
-                        CupertinoColors.separator,
-                        context,
-                      ),
-                      width: 0.5,
-                    ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    child: const Text('Cancel'),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(null),
-                      child: const Text('Cancel'),
-                    ),
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.of(context).pop(selected),
-                      child: const Text('Done'),
-                    ),
-                  ],
-                ),
+                  CupertinoButton(
+                    child: const Text('Done'),
+                    onPressed: () => Navigator.of(context).pop(selected),
+                  ),
+                ],
               ),
               Expanded(
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.dateAndTime,
                   initialDateTime: initial,
-                  use24hFormat: false,
                   onDateTimeChanged: (value) => selected = value,
                 ),
               ),
@@ -346,30 +308,66 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
       },
     );
 
-    if (!mounted) return;
     if (picked != null) {
       setState(() => _dueDate = picked);
     }
   }
 
+  Future<void> _pickList() async {
+    final result = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: const Text('Choose List'),
+          actions: [
+            for (final list in widget.state.lists)
+              CupertinoActionSheetAction(
+                onPressed: () => Navigator.of(context).pop(list.id),
+                child: Text(list.name),
+              ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() => _listId = result);
+    }
+  }
+
+  Future<void> _pickRepeat() async {
+    final result = await showCupertinoModalPopup<TaskRepeat>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: const Text('Repeat'),
+          actions: [
+            for (final repeat in TaskRepeat.values)
+              CupertinoActionSheetAction(
+                onPressed: () => Navigator.of(context).pop(repeat),
+                child: Text(repeat.label),
+              ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() => _repeat = result);
+    }
+  }
+
   Future<void> _saveTask() async {
     final title = _titleController.text.trim();
-    if (title.isEmpty) {
-      await showCupertinoDialog<void>(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Title required'),
-          content: const Text('Please enter a title for the task.'),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+    if (title.isEmpty) return;
 
     final subtasks = <Subtask>[];
     for (var i = 0; i < _subtaskControllers.length; i++) {
@@ -384,23 +382,17 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
       );
     }
 
-    final tags = _tagsController.text
-        .split(',')
-        .map((tag) => tag.trim())
-        .where((tag) => tag.isNotEmpty)
-        .toList();
-
     final existing = widget.initialTask;
     final task = Task(
       id: existing?.id ?? generateId(),
       title: title,
-      description: _descriptionController.text.trim(),
+      description: _notesController.text.trim(),
       dueDate: _dueDate,
+      repeat: _repeat,
+      listId: _listId,
+      priority: _priority,
       subtasks: subtasks,
-      tags: tags,
-      project: _projectController.text.trim().isEmpty
-          ? null
-          : _projectController.text.trim(),
+      tags: const [],
       isCompleted: _isCompleted,
       createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
@@ -427,8 +419,8 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
         content: Text('This will permanently delete "${task.title}".'),
         actions: [
           CupertinoDialogAction(
-            child: const Text('Cancel'),
             onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
@@ -444,5 +436,121 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
       if (!mounted) return;
       Navigator.of(context).pop();
     }
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: child,
+    );
+  }
+}
+
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      onPressed: onTap,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: CupertinoColors.label.resolveFrom(context),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(color: CupertinoColors.label.resolveFrom(context)),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: CupertinoColors.secondaryLabel),
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(CupertinoIcons.chevron_forward, size: 14),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubtaskRow extends StatelessWidget {
+  const _SubtaskRow({
+    required this.controller,
+    required this.completed,
+    required this.onToggle,
+    required this.onRemove,
+  });
+
+  final TextEditingController controller;
+  final bool completed;
+  final VoidCallback onToggle;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size.square(24),
+          onPressed: onToggle,
+          child: Icon(
+            completed
+                ? CupertinoIcons.check_mark_circled_solid
+                : CupertinoIcons.circle,
+          ),
+        ),
+        Expanded(
+          child: CupertinoTextField(
+            controller: controller,
+            placeholder: 'Subtask',
+            decoration: const BoxDecoration(color: CupertinoColors.transparent),
+          ),
+        ),
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size.square(24),
+          onPressed: onRemove,
+          child: const Icon(
+            CupertinoIcons.minus_circle,
+            color: CupertinoColors.systemRed,
+            size: 18,
+          ),
+        ),
+      ],
+    );
   }
 }

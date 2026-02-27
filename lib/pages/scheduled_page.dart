@@ -30,34 +30,26 @@ class ScheduledPage extends StatelessWidget {
             return ListView.builder(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
               itemCount: tasks.length,
-              itemBuilder: (context, index) =>
-                  _ScheduledTaskCard(state: state, task: tasks[index]),
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return TaskCard(
+                  task: task,
+                  listName: state.listNameForTask(task),
+                  onTap: () => Navigator.of(context).push(
+                    CupertinoPageRoute<void>(
+                      builder: (context) =>
+                          TaskEditorPage(state: state, initialTask: task),
+                    ),
+                  ),
+                  onToggleComplete: () => state.toggleTaskCompleted(task.id),
+                  onToggleSubtask: (subtaskId) =>
+                      state.toggleSubtaskCompleted(task.id, subtaskId),
+                );
+              },
             );
           },
         ),
       ),
-    );
-  }
-}
-
-class _ScheduledTaskCard extends StatelessWidget {
-  const _ScheduledTaskCard({required this.state, required this.task});
-
-  final AppState state;
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskCard(
-      task: task,
-      onTap: () => Navigator.of(context).push(
-        CupertinoPageRoute<void>(
-          builder: (context) => TaskEditorPage(state: state, initialTask: task),
-        ),
-      ),
-      onToggleComplete: () => state.toggleTaskCompleted(task.id),
-      onToggleSubtask: (subtaskId) =>
-          state.toggleSubtaskCompleted(task.id, subtaskId),
     );
   }
 }

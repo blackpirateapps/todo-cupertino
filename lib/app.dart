@@ -6,6 +6,7 @@ import 'pages/home_page.dart';
 import 'pages/scheduled_page.dart';
 import 'pages/settings_page.dart';
 import 'state/app_state.dart';
+import 'widgets/quick_add_overlay.dart';
 
 class TodoCupertinoApp extends StatelessWidget {
   const TodoCupertinoApp({super.key, required this.state});
@@ -66,27 +67,45 @@ class AppShell extends StatelessWidget {
         switch (index) {
           case 0:
             return CupertinoTabView(
-              builder: (context) => HomePage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: HomePage(state: state),
+              ),
             );
           case 1:
             return CupertinoTabView(
-              builder: (context) => ScheduledPage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: ScheduledPage(state: state),
+              ),
             );
           case 2:
             return CupertinoTabView(
-              builder: (context) => AllTasksPage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: AllTasksPage(state: state),
+              ),
             );
           case 3:
             return CupertinoTabView(
-              builder: (context) => FlaggedPage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: FlaggedPage(state: state),
+              ),
             );
           case 4:
             return CupertinoTabView(
-              builder: (context) => SettingsPage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: SettingsPage(state: state),
+              ),
             );
           default:
             return CupertinoTabView(
-              builder: (context) => HomePage(state: state),
+              builder: (context) => QuickAddOverlay(
+                state: state,
+                child: HomePage(state: state),
+              ),
             );
         }
       },

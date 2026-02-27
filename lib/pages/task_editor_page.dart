@@ -450,6 +450,9 @@ class _TaskEditorPageState extends State<TaskEditorPage> {
       subtasks: subtasks,
       tags: const [],
       isCompleted: _isCompleted,
+      focusDurationMinutes:
+          existing?.focusDurationMinutes ?? widget.state.pomodoroMinutes,
+      focusAccumulatedMinutes: existing?.focusAccumulatedMinutes ?? 0,
       createdAt: existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );

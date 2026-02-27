@@ -4,15 +4,15 @@ Cupertino-themed todo list app for Android (Flutter UI using only Cupertino widg
 
 ## Features
 
-- Home page (all tasks)
-- Today page (tasks due today)
-- Projects page (grouped by project)
-- Settings page (dark mode toggle)
-- Task fields: title, due date, description, subtasks, tags, project
+- Today dashboard (search, upcoming, and home list strip)
+- All tasks page
+- Lists page (create/edit/delete lists, open list detail)
+- Focus page (choose task, per-task focus duration, timer)
+- Settings page (dark mode + pomodoro defaults)
+- Task fields: title, due date, description, subtasks, tags, list, priority
 - Local-only persistence via `shared_preferences` (JSON)
 
 ## Notes
 
 - This repository intentionally avoids local build/test execution in this environment.
 - The GitHub Actions workflow generates the Android platform wrapper with `flutter create --platforms=android .` before running analysis and building the APK.
-

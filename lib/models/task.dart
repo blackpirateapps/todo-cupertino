@@ -55,6 +55,8 @@ class Task {
     required this.subtasks,
     required this.tags,
     required this.isCompleted,
+    required this.focusDurationMinutes,
+    required this.focusAccumulatedMinutes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -69,6 +71,8 @@ class Task {
   final List<Subtask> subtasks;
   final List<String> tags;
   final bool isCompleted;
+  final int focusDurationMinutes;
+  final int focusAccumulatedMinutes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -85,6 +89,8 @@ class Task {
     List<Subtask>? subtasks,
     List<String>? tags,
     bool? isCompleted,
+    int? focusDurationMinutes,
+    int? focusAccumulatedMinutes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -101,6 +107,9 @@ class Task {
       subtasks: subtasks ?? this.subtasks,
       tags: tags ?? this.tags,
       isCompleted: isCompleted ?? this.isCompleted,
+      focusDurationMinutes: focusDurationMinutes ?? this.focusDurationMinutes,
+      focusAccumulatedMinutes:
+          focusAccumulatedMinutes ?? this.focusAccumulatedMinutes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -118,6 +127,8 @@ class Task {
       'subtasks': subtasks.map((subtask) => subtask.toJson()).toList(),
       'tags': tags,
       'isCompleted': isCompleted,
+      'focusDurationMinutes': focusDurationMinutes,
+      'focusAccumulatedMinutes': focusAccumulatedMinutes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -147,6 +158,13 @@ class Task {
       subtasks: rawSubtasks.map(Subtask.fromJson).toList(),
       tags: rawTags,
       isCompleted: json['isCompleted'] == true,
+      focusDurationMinutes: _parseNonNegativeInt(
+        json['focusDurationMinutes'],
+        fallback: 25,
+      ),
+      focusAccumulatedMinutes: _parseNonNegativeInt(
+        json['focusAccumulatedMinutes'],
+      ),
       createdAt:
           DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now(),
@@ -179,6 +197,13 @@ class Task {
       if (item.name == raw) return item;
     }
     return TaskRepeat.none;
+  }
+
+  static int _parseNonNegativeInt(Object? raw, {int fallback = 0}) {
+    if (raw is int) return raw < 0 ? fallback : raw;
+    final parsed = int.tryParse(raw?.toString() ?? '');
+    if (parsed == null || parsed < 0) return fallback;
+    return parsed;
   }
 }
 

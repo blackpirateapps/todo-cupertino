@@ -2,10 +2,9 @@ import 'package:flutter/cupertino.dart';
 
 import 'models/task.dart';
 import 'pages/all_tasks_page.dart';
-import 'pages/flagged_page.dart';
 import 'pages/focus_page.dart';
 import 'pages/home_page.dart';
-import 'pages/scheduled_page.dart';
+import 'pages/lists_page.dart';
 import 'pages/settings_page.dart';
 import 'state/app_state.dart';
 import 'widgets/quick_add_overlay.dart';
@@ -44,7 +43,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late final CupertinoTabController _tabController;
-  static const _focusTabIndex = 4;
+  static const _focusTabIndex = 3;
 
   @override
   void initState() {
@@ -75,16 +74,12 @@ class _AppShellState extends State<AppShell> {
             label: 'Today',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.calendar),
-            label: 'Scheduled',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.tray_full),
             label: 'All',
           ),
           BottomNavigationBarItem(
-            icon: Icon(CupertinoIcons.flag),
-            label: 'Flagged',
+            icon: Icon(CupertinoIcons.square_grid_2x2),
+            label: 'Lists',
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.timer),
@@ -109,7 +104,7 @@ class _AppShellState extends State<AppShell> {
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: ScheduledPage(
+                child: AllTasksPage(
                   state: state,
                   onStartFocus: _startFocusForTask,
                 ),
@@ -119,7 +114,7 @@ class _AppShellState extends State<AppShell> {
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: AllTasksPage(
+                child: ListsPage(
                   state: state,
                   onStartFocus: _startFocusForTask,
                 ),
@@ -129,20 +124,10 @@ class _AppShellState extends State<AppShell> {
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,
-                child: FlaggedPage(
-                  state: state,
-                  onStartFocus: _startFocusForTask,
-                ),
-              ),
-            );
-          case 4:
-            return CupertinoTabView(
-              builder: (context) => QuickAddOverlay(
-                state: state,
                 child: FocusPage(state: state),
               ),
             );
-          case 5:
+          case 4:
             return CupertinoTabView(
               builder: (context) => QuickAddOverlay(
                 state: state,

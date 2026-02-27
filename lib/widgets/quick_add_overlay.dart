@@ -12,39 +12,68 @@ class QuickAddOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        child,
-        Positioned(
-          right: 18,
-          bottom: 86,
-          child: CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => _openQuickAdd(context),
-            child: Container(
-              width: 58,
-              height: 58,
-              decoration: const BoxDecoration(
-                color: CupertinoColors.activeBlue,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 16,
-                    color: Color(0x40000000),
-                    offset: Offset(0, 6),
+    return AnimatedBuilder(
+      animation: state,
+      builder: (context, _) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            child,
+            Positioned(
+              right: 18,
+              bottom: 86,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => _openQuickAdd(context),
+                    child: Container(
+                      width: 58,
+                      height: 58,
+                      decoration: const BoxDecoration(
+                        color: CupertinoColors.activeBlue,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 16,
+                            color: Color(0x40000000),
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        CupertinoIcons.add,
+                        color: CupertinoColors.white,
+                        size: 30,
+                      ),
+                    ),
                   ),
+                  if (state.focusRunning)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.activeGreen,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: CupertinoColors.systemBackground.resolveFrom(
+                              context,
+                            ),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
-              child: const Icon(
-                CupertinoIcons.add,
-                color: CupertinoColors.white,
-                size: 30,
-              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -278,6 +307,8 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
         subtasks: const [],
         tags: const [],
         isCompleted: false,
+        focusDurationMinutes: widget.state.pomodoroMinutes,
+        focusAccumulatedMinutes: 0,
         createdAt: now,
         updatedAt: now,
       ),

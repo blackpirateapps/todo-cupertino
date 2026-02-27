@@ -72,20 +72,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
                       ),
                       child: Text('Today'),
                     ),
-                    _TasksFilter.scheduled: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 10,
-                      ),
-                      child: Text('Scheduled'),
-                    ),
-                    _TasksFilter.flagged: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 6,
-                        horizontal: 10,
-                      ),
-                      child: Text('Flagged'),
-                    ),
                   },
                   onValueChanged: (value) {
                     if (value == null) return;
@@ -154,12 +140,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
         tasks = tasks.where(
           (t) => t.dueDate != null && isSameDate(t.dueDate!, now),
         );
-        break;
-      case _TasksFilter.scheduled:
-        tasks = tasks.where((t) => t.dueDate != null);
-        break;
-      case _TasksFilter.flagged:
-        tasks = tasks.where((t) => t.priority == TaskPriority.high);
         break;
     }
 
@@ -248,6 +228,29 @@ class _TaskRow extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
+                if (task.focusAccumulatedMinutes > 0) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: CupertinoColors.systemPurple.withValues(
+                        alpha: 0.14,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${task.focusAccumulatedMinutes}m focus',
+                      style: const TextStyle(
+                        color: CupertinoColors.systemPurple,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -302,4 +305,4 @@ class _TaskRow extends StatelessWidget {
   }
 }
 
-enum _TasksFilter { all, today, scheduled, flagged }
+enum _TasksFilter { all, today }

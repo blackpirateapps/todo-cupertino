@@ -410,6 +410,29 @@ class _TodayTaskRow extends StatelessWidget {
                       color: CupertinoColors.secondaryLabel,
                     ),
                   ),
+                  if (task.focusAccumulatedMinutes > 0) ...[
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemPurple.withValues(
+                          alpha: 0.14,
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${task.focusAccumulatedMinutes}m focus',
+                        style: const TextStyle(
+                          color: CupertinoColors.systemPurple,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -443,14 +466,16 @@ class _MyListsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lists = state.lists.take(3).toList();
+    final lists = state.lists;
 
     return SizedBox(
       height: 106,
-      child: Row(
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
           for (final list in lists) ...[
-            Expanded(
+            SizedBox(
+              width: 112,
               child: GestureDetector(
                 onTap: () => onListTap(list),
                 child: _ListTileCard(
@@ -461,7 +486,8 @@ class _MyListsRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          Expanded(
+          SizedBox(
+            width: 112,
             child: GestureDetector(
               onTap: onAddTap,
               child: Container(

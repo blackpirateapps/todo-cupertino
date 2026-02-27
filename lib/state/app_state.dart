@@ -35,6 +35,7 @@ class AppState extends ChangeNotifier {
   bool _isDarkMode;
   int _pomodoroMinutes;
   int _breakMinutes;
+  bool _focusRunning = false;
 
   String? _focusTaskId;
   int _focusStartNonce = 0;
@@ -111,6 +112,7 @@ class AppState extends ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   int get pomodoroMinutes => _pomodoroMinutes;
   int get breakMinutes => _breakMinutes;
+  bool get focusRunning => _focusRunning;
 
   List<Task> get tasks => List.unmodifiable(_tasks);
   List<TodoList> get lists => List.unmodifiable(_lists);
@@ -233,6 +235,22 @@ class AppState extends ChangeNotifier {
     await _saveLists();
   }
 
+  Future<void> deleteList(String listId) async {
+    if (_lists.length <= 1) return;
+    if (!_lists.any((list) => list.id == listId)) return;
+    final fallback = _lists.firstWhere((list) => list.id != listId);
+    _lists = _lists.where((list) => list.id != listId).toList();
+    _tasks = _tasks
+        .map(
+          (task) =>
+              task.listId == listId ? task.copyWith(listId: fallback.id) : task,
+        )
+        .toList();
+    notifyListeners();
+    await _saveLists();
+    await _saveTasks();
+  }
+
   Future<void> addTask(Task task) async {
     _tasks = [..._tasks, task];
     notifyListeners();
@@ -279,6 +297,38 @@ class AppState extends ChangeNotifier {
     }).toList();
     notifyListeners();
     await _saveTasks();
+  }
+
+  Future<void> setTaskFocusDuration(String taskId, int minutes) async {
+    final clamped = minutes.clamp(0, 500).toInt();
+    _tasks = _tasks.map((task) {
+      if (task.id != taskId) return task;
+      return task.copyWith(
+        focusDurationMinutes: clamped,
+        updatedAt: DateTime.now(),
+      );
+    }).toList();
+    notifyListeners();
+    await _saveTasks();
+  }
+
+  Future<void> addTaskFocusMinutes(String taskId, int minutes) async {
+    if (minutes <= 0) return;
+    _tasks = _tasks.map((task) {
+      if (task.id != taskId) return task;
+      return task.copyWith(
+        focusAccumulatedMinutes: task.focusAccumulatedMinutes + minutes,
+        updatedAt: DateTime.now(),
+      );
+    }).toList();
+    notifyListeners();
+    await _saveTasks();
+  }
+
+  void setFocusRunning(bool running) {
+    if (_focusRunning == running) return;
+    _focusRunning = running;
+    notifyListeners();
   }
 
   Future<void> _saveTasks() async {

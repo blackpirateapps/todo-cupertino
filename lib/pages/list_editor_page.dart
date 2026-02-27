@@ -5,9 +5,10 @@ import '../state/app_state.dart';
 import '../utils/app_utils.dart';
 
 class ListEditorPage extends StatefulWidget {
-  const ListEditorPage({super.key, required this.state});
+  const ListEditorPage({super.key, required this.state, this.initialList});
 
   final AppState state;
+  final TodoList? initialList;
 
   @override
   State<ListEditorPage> createState() => _ListEditorPageState();
@@ -18,6 +19,20 @@ class _ListEditorPageState extends State<ListEditorPage> {
   final _descriptionController = TextEditingController();
   String _iconKey = 'folder_fill';
   String _colorKey = 'blue';
+
+  bool get _isEditing => widget.initialList != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final list = widget.initialList;
+    if (list != null) {
+      _nameController.text = list.name;
+      _descriptionController.text = list.description;
+      _iconKey = list.iconKey;
+      _colorKey = list.colorKey;
+    }
+  }
 
   @override
   void dispose() {
@@ -30,11 +45,11 @@ class _ListEditorPageState extends State<ListEditorPage> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: const Text('New List'),
+        middle: Text(_isEditing ? 'Edit List' : 'New List'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _save,
-          child: const Text('Create'),
+          child: Text(_isEditing ? 'Save' : 'Create'),
         ),
       ),
       child: SafeArea(
@@ -123,6 +138,16 @@ class _ListEditorPageState extends State<ListEditorPage> {
                   ),
               ],
             ),
+            if (_isEditing) ...[
+              const SizedBox(height: 20),
+              CupertinoButton(
+                onPressed: _delete,
+                child: const Text(
+                  'Delete List',
+                  style: TextStyle(color: CupertinoColors.systemRed),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -134,18 +159,60 @@ class _ListEditorPageState extends State<ListEditorPage> {
     if (name.isEmpty) return;
 
     final now = DateTime.now();
-    await widget.state.addList(
-      TodoList(
-        id: generateId(),
-        name: name,
-        description: _descriptionController.text.trim(),
-        iconKey: _iconKey,
-        colorKey: _colorKey,
-        createdAt: now,
-        updatedAt: now,
+    final existing = widget.initialList;
+    if (existing == null) {
+      await widget.state.addList(
+        TodoList(
+          id: generateId(),
+          name: name,
+          description: _descriptionController.text.trim(),
+          iconKey: _iconKey,
+          colorKey: _colorKey,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    } else {
+      await widget.state.updateList(
+        existing.copyWith(
+          name: name,
+          description: _descriptionController.text.trim(),
+          iconKey: _iconKey,
+          colorKey: _colorKey,
+          updatedAt: now,
+        ),
+      );
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _delete() async {
+    final existing = widget.initialList;
+    if (existing == null) return;
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Delete list?'),
+        content: const Text(
+          'Tasks in this list will be moved to another list.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
-
+    if (confirmed != true) return;
+    await widget.state.deleteList(existing.id);
     if (!mounted) return;
     Navigator.of(context).pop();
   }

@@ -129,6 +129,12 @@ class TaskCard extends StatelessWidget {
                                     '${task.completedSubtaskCount}/${task.subtasks.length} subtasks',
                                 icon: CupertinoIcons.check_mark_circled,
                               ),
+                            if (task.focusAccumulatedMinutes > 0)
+                              Pill(
+                                text: '${task.focusAccumulatedMinutes}m focus',
+                                icon: CupertinoIcons.timer,
+                                color: CupertinoColors.systemPurple,
+                              ),
                           ],
                         ),
                       ],

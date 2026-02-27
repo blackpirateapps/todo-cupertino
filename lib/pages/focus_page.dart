@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 
+import '../models/task.dart';
+import '../services/focus_notification_service.dart';
 import '../state/app_state.dart';
+import 'focus_task_picker_page.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key, required this.state});
@@ -21,11 +24,13 @@ class _FocusPageState extends State<FocusPage> {
   bool _isBreak = false;
   int _completedPomodoros = 0;
   int _lastStartNonce = -1;
+  int _unpersistedFocusSeconds = 0;
 
   @override
   void initState() {
     super.initState();
     widget.state.addListener(_handleStateUpdate);
+    FocusNotificationService.instance.initialize();
     _lastStartNonce = widget.state.focusStartNonce;
     if (widget.state.focusTask != null && widget.state.focusStartNonce > 0) {
       _startFocusSession(restartCount: false);
@@ -38,6 +43,8 @@ class _FocusPageState extends State<FocusPage> {
   void dispose() {
     widget.state.removeListener(_handleStateUpdate);
     _timer?.cancel();
+    widget.state.setFocusRunning(false);
+    FocusNotificationService.instance.cancel();
     super.dispose();
   }
 
@@ -97,6 +104,10 @@ class _FocusPageState extends State<FocusPage> {
                     ),
                   ),
                 ),
+                if (focusTask != null) ...[
+                  const SizedBox(height: 8),
+                  _focusDurationRow(context, focusTask),
+                ],
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
@@ -254,28 +265,10 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Future<void> _pickTask() async {
-    final selected = await showCupertinoModalPopup<String>(
-      context: context,
-      builder: (context) {
-        final tasks = widget.state
-            .sortedTasks()
-            .where((t) => !t.isCompleted)
-            .toList();
-        return CupertinoActionSheet(
-          title: const Text('Choose Focus Task'),
-          actions: [
-            for (final task in tasks)
-              CupertinoActionSheetAction(
-                onPressed: () => Navigator.of(context).pop(task.id),
-                child: Text(task.title),
-              ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        );
-      },
+    final selected = await Navigator.of(context).push<String>(
+      CupertinoPageRoute<String>(
+        builder: (context) => FocusTaskPickerPage(state: widget.state),
+      ),
     );
 
     if (selected != null) {
@@ -283,14 +276,105 @@ class _FocusPageState extends State<FocusPage> {
     }
   }
 
+  Widget _focusDurationRow(BuildContext context, Task task) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.secondarySystemGroupedBackground.resolveFrom(
+          context,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        onPressed: () => _pickFocusDuration(task),
+        child: Row(
+          children: [
+            const Icon(CupertinoIcons.timer, size: 18),
+            const SizedBox(width: 8),
+            const Text('Task focus length'),
+            const Spacer(),
+            Text(
+              '${task.focusDurationMinutes} min',
+              style: const TextStyle(color: CupertinoColors.secondaryLabel),
+            ),
+            const SizedBox(width: 4),
+            const Icon(CupertinoIcons.chevron_forward, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFocusDuration(Task task) async {
+    var selected = task.focusDurationMinutes;
+    final result = await showCupertinoModalPopup<int>(
+      context: context,
+      builder: (context) {
+        return Container(
+          height: 320,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  CupertinoButton(
+                    onPressed: () => Navigator.of(context).pop(selected),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 36,
+                  scrollController: FixedExtentScrollController(
+                    initialItem: selected.clamp(0, 500).toInt(),
+                  ),
+                  onSelectedItemChanged: (value) => selected = value,
+                  children: List<Widget>.generate(
+                    501,
+                    (index) => Center(child: Text('$index min')),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result == null) return;
+    await widget.state.setTaskFocusDuration(task.id, result);
+    if (!mounted) return;
+    if (!_isRunning && !_isBreak) {
+      _resetFocusTimer();
+    }
+  }
+
   void _startFocusSession({bool restartCount = false}) {
     _timer?.cancel();
     if (restartCount) _completedPomodoros = 0;
     _isBreak = false;
-    _totalSeconds = widget.state.pomodoroMinutes * 60;
+    final minutes =
+        widget.state.focusTask?.focusDurationMinutes ??
+        widget.state.pomodoroMinutes;
+    _totalSeconds = minutes * 60;
     _remainingSeconds = _totalSeconds;
+    if (_totalSeconds == 0) {
+      _isRunning = false;
+      widget.state.setFocusRunning(false);
+      FocusNotificationService.instance.cancel();
+      setState(() {});
+      return;
+    }
     _isRunning = true;
+    _unpersistedFocusSeconds = 0;
+    widget.state.setFocusRunning(true);
     _startTicker();
+    _updateLiveNotification();
     setState(() {});
   }
 
@@ -300,7 +384,9 @@ class _FocusPageState extends State<FocusPage> {
     _totalSeconds = widget.state.breakMinutes * 60;
     _remainingSeconds = _totalSeconds;
     _isRunning = true;
+    widget.state.setFocusRunning(true);
     _startTicker();
+    _updateLiveNotification();
     setState(() {});
   }
 
@@ -308,13 +394,20 @@ class _FocusPageState extends State<FocusPage> {
     _timer?.cancel();
     _isBreak = false;
     _isRunning = false;
-    _totalSeconds = widget.state.pomodoroMinutes * 60;
+    final minutes =
+        widget.state.focusTask?.focusDurationMinutes ??
+        widget.state.pomodoroMinutes;
+    _totalSeconds = minutes * 60;
     _remainingSeconds = _totalSeconds;
+    widget.state.setFocusRunning(false);
+    FocusNotificationService.instance.cancel();
     setState(() {});
   }
 
   void _pause() {
     _timer?.cancel();
+    widget.state.setFocusRunning(false);
+    FocusNotificationService.instance.cancel();
     setState(() => _isRunning = false);
   }
 
@@ -324,7 +417,9 @@ class _FocusPageState extends State<FocusPage> {
       return;
     }
     _isRunning = true;
+    widget.state.setFocusRunning(true);
     _startTicker();
+    _updateLiveNotification();
     setState(() {});
   }
 
@@ -334,6 +429,8 @@ class _FocusPageState extends State<FocusPage> {
       if (!mounted) return;
       if (_remainingSeconds <= 0) {
         timer.cancel();
+        widget.state.setFocusRunning(false);
+        FocusNotificationService.instance.cancel();
         if (_isBreak) {
           _resetFocusTimer();
         } else {
@@ -345,7 +442,29 @@ class _FocusPageState extends State<FocusPage> {
       setState(() {
         _remainingSeconds -= 1;
       });
+      if (!_isBreak) {
+        _unpersistedFocusSeconds += 1;
+        if (_unpersistedFocusSeconds >= 60) {
+          _unpersistedFocusSeconds -= 60;
+          final taskId = widget.state.focusTaskId;
+          if (taskId != null) {
+            widget.state.addTaskFocusMinutes(taskId, 1);
+          }
+        }
+      }
+      _updateLiveNotification();
     });
+  }
+
+  void _updateLiveNotification() {
+    if (!_isRunning) return;
+    final label = _isBreak
+        ? 'Break'
+        : (widget.state.focusTask?.title ?? 'Focus');
+    FocusNotificationService.instance.showRunning(
+      title: '$label running',
+      body: '${_formatClock(_remainingSeconds)} remaining',
+    );
   }
 }
 

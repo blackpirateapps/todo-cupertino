@@ -9,12 +9,16 @@
 - List management
   - Create lists with name, description, icon.
   - Create lists with predefined color selection.
+  - Dedicated `Lists` tab supports opening, editing, and deleting lists.
+  - Deleting a list reassigns its tasks to another existing list.
   - List tiles on Home open list detail pages.
 - Task management
   - Create/edit/delete tasks.
   - Fields: due date, repeat, list, priority, subtasks, notes, completed.
   - Task editor supports rapid subtask entry (`Add Subtask` focuses input; Enter creates next).
   - Priority is color-coded in task editing surfaces.
+  - Tasks store per-task focus session minutes and accumulated focus runtime minutes.
+  - Focus runtime is shown as a pill in All, Today, and list detail task surfaces.
 - Home behavior
   - Today card aggregates tasks due today across all lists.
   - If due-today count > 3, home prioritizes high-priority tasks for display.
@@ -22,9 +26,13 @@
   - Upcoming tasks can be marked completed directly from Home.
 - Focus/Pomodoro
   - Dedicated `Focus` tab with timer UI.
-  - Current focus task can be selected in focus page.
+  - Current focus task is selected from a full-page searchable picker.
+  - Per-task focus length is adjustable from 0 to 500 minutes via picker.
   - Play icons on task rows launch Focus tab and start session on that task.
   - Focus and break default durations configurable in Settings.
+  - Running focus minutes are accumulated into the focused task.
+  - Live ongoing Android notification is posted while timer is running (via `flutter_local_notifications`).
+  - App-wide floating quick-add button shows a running indicator while focus timer is active.
 - Quick add
   - Floating plus button across tabs opens quick-add popup.
   - Quick add supports title + due date + list.
@@ -32,9 +40,8 @@
 ## Navigation
 - Tabs:
   - Today
-  - Scheduled
   - All
-  - Flagged
+  - Lists
   - Focus
   - Settings
 
@@ -45,11 +52,15 @@
   - Core state, persistence, list/task operations, focus config.
   - Stores pomodoro defaults and focus start signals.
 - `lib/pages/focus_page.dart`
-  - Pomodoro timer page.
+  - Pomodoro timer page with per-task duration picker and live notification updates.
+- `lib/pages/focus_task_picker_page.dart`
+  - Searchable full-page focus task chooser.
 - `lib/pages/all_tasks_page.dart`
   - Redesigned tasks screen with segmented filters + search + play icon.
 - `lib/pages/home_page.dart`
   - Dashboard with functional Today/My Lists/Upcoming + search + play icons.
+- `lib/pages/lists_page.dart`
+  - Full list manager tab with open/edit/delete flows.
 - `lib/pages/list_detail_page.dart`
   - Per-list task list with create/edit and play icon.
 - `lib/pages/list_editor_page.dart`
@@ -57,14 +68,16 @@
 - `lib/pages/task_editor_page.dart`
   - Full-page task create/edit with aligned setting values, checkbox completed state, and rapid subtask entry.
 - `lib/widgets/task_card.dart`
-  - Shared task card used in scheduled/flagged/list detail; includes play icon.
+  - Shared task card used in list detail; includes play icon and focus-minutes pill.
 - `lib/pages/settings_page.dart`
   - Dark mode + focus/break duration controls.
+- `lib/services/focus_notification_service.dart`
+  - Android ongoing notification abstraction for live focus timer status.
 
 ## Data Model
 
 ### Task (`lib/models/task.dart`)
-- `id`, `title`, `description`, `dueDate`, `repeat`, `listId`, `priority`, `subtasks`, `tags`, `isCompleted`, `createdAt`, `updatedAt`
+- `id`, `title`, `description`, `dueDate`, `repeat`, `listId`, `priority`, `subtasks`, `tags`, `isCompleted`, `focusDurationMinutes`, `focusAccumulatedMinutes`, `createdAt`, `updatedAt`
 
 ### TodoList (`lib/models/todo_list.dart`)
 - `id`, `name`, `description`, `iconKey`, `colorKey`, `createdAt`, `updatedAt`
@@ -77,7 +90,6 @@
 - Pomodoro break length: `pomodoro_break_minutes_v1`
 
 ## Known Gaps
-- `Flagged` tab maps to high-priority tasks (no separate flagged boolean yet).
 - No automated widget tests for focus timer/task-play flows yet.
 
 ## Validation Notes
